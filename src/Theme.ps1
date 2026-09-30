@@ -58,27 +58,28 @@ function New-ButtonRow([int]$y, [int]$w) {
 
 # Section header bar: title + one-line description. Stretches with the tab.
 function New-SectionHeader([string]$title, [string]$desc) {
-    $p = New-Object System.Windows.Forms.Panel
-    $p.Location = New-Object System.Drawing.Point(12, 8)
-    $p.Size = New-Object System.Drawing.Size(880, 58)
-    $p.Anchor = 'Top, Left, Right'
-    $p.BackColor = $T.Bg
-    $t = New-Object System.Windows.Forms.Label
-    $t.Text = $title
-    $t.Font = $FontSection
-    $t.ForeColor = $T.Text
-    $t.Location = New-Object System.Drawing.Point(0, 0)
-    $t.AutoSize = $true
-    $p.Controls.Add($t)
-    $d = New-Object System.Windows.Forms.Label
-    $d.Text = $desc
-    $d.Font = $FontUI
-    $d.ForeColor = $T.Muted
-    $d.Location = New-Object System.Drawing.Point(0, 30)
-    $d.Size = New-Object System.Drawing.Size(880, 22)
-    $d.Anchor = 'Top, Left, Right'
-    $p.Controls.Add($d)
-    return $p
+    # NOTE: locals must not be named $t/$T (PowerShell is case-insensitive).
+    $pnlH = New-Object System.Windows.Forms.Panel
+    $pnlH.Location = New-Object System.Drawing.Point(12, 8)
+    $pnlH.Size = New-Object System.Drawing.Size(880, 58)
+    $pnlH.Anchor = 'Top, Left, Right'
+    $pnlH.BackColor = $T.Bg
+    $lblTitleH = New-Object System.Windows.Forms.Label
+    $lblTitleH.Text = $title
+    $lblTitleH.Font = $FontSection
+    $lblTitleH.ForeColor = $T.Text
+    $lblTitleH.Location = New-Object System.Drawing.Point(0, 0)
+    $lblTitleH.AutoSize = $true
+    $pnlH.Controls.Add($lblTitleH)
+    $lblDescH = New-Object System.Windows.Forms.Label
+    $lblDescH.Text = $desc
+    $lblDescH.Font = $FontUI
+    $lblDescH.ForeColor = $T.Muted
+    $lblDescH.Location = New-Object System.Drawing.Point(0, 30)
+    $lblDescH.Size = New-Object System.Drawing.Size(880, 22)
+    $lblDescH.Anchor = 'Top, Left, Right'
+    $pnlH.Controls.Add($lblDescH)
+    return $pnlH
 }
 
 # Surface card. Caller sets Location/Size/Anchor; content is added by the caller.
