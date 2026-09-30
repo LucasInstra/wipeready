@@ -188,16 +188,10 @@ $tabs.Add_DrawItem({
     $brush = New-Object System.Drawing.SolidBrush($bg)
     $e.Graphics.FillRectangle($brush, $e.Bounds)
     $brush.Dispose()
-    $sf = New-Object System.Drawing.StringFormat
-    $sf.Alignment = 'Center'
-    $sf.LineAlignment = 'Center'
-    $fnt = if ($selected) {
-        New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
-    } else { $FontUI }
-    $e.Graphics.DrawString($s.TabPages[$e.Index].Text, $fnt,
-        (New-Object System.Drawing.SolidBrush($fg)), $e.Bounds, $sf)
-    $sf.Dispose()
-    if ($selected) { $fnt.Dispose() }
+    $flags = [System.Windows.Forms.TextFormatFlags]::HorizontalCenter -bor `
+             [System.Windows.Forms.TextFormatFlags]::VerticalCenter
+    [System.Windows.Forms.TextRenderer]::DrawText($e.Graphics,
+        $s.TabPages[$e.Index].Text, $e.Font, $e.Bounds, $fg, $flags)
 })
 
 $status = New-Object System.Windows.Forms.StatusStrip
