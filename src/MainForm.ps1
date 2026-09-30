@@ -105,9 +105,20 @@ function Show-App {
 }
 
 # Tabs always fill the full row width (no unpainted strip on the right).
+# Guards: changing ItemSize re-runs layout, which can synchronously fire
+# Resize again. Without the reentrancy flag + change check below, that
+# nesting overflows the call stack ("profundidade de chamada").
+$script:UpdatingTabs = $false
 function Update-TabWidths {
+    if ($script:UpdatingTabs) { return }
     if ($script:tabs.TabPages.Count -eq 0) { return }
     $w = [math]::Floor($script:tabs.ClientSize.Width / $script:tabs.TabPages.Count)
     if ($w -lt 80) { $w = 80 }
-    $script:tabs.ItemSize = New-Object System.Drawing.Size($w, 34)
+    if ($script:tabs.ItemSize.Width -eq $w) { return }
+    $script:UpdatingTabs = $true
+    try {
+        $script:tabs.ItemSize = New-Object System.Drawing.Size($w, 34)
+    } finally {
+        $script:UpdatingTabs = $false
+    }
 }
