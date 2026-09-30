@@ -176,8 +176,8 @@ function Add-ProgramsTab {
     })
 
     # Enter toggles + advances (checklist flow), Down/Up moves,
-    # Space toggles without moving. Every move forces the row into view
-    # so the list scrolls along at the last visible row.
+    # Space toggles without moving. Every move keeps the row within the
+    # top 10 visible lines so the list starts scrolling early.
     # Ctrl+S saves the checked rows.
     $grid.Add_KeyDown({
         param($sender, $e)
@@ -335,10 +335,8 @@ function Update-ProgramsCount {
     $script:ProgramsCountLabel.Text = $text
 }
 
-# Keeps keyboard navigation visible: scrolls the grid so $index is shown
-# with one row of context below it (never riding the very bottom edge,
-# otherwise a single extra move leaves it off-screen before the next
-# scroll catches up).
+# Keeps keyboard navigation visible: scrolling starts once the current
+# row passes the 10th visible line (never near the bottom edge unseen).
 function Set-ProgramsVisibleRow($grid, [int]$index, [string]$key = 'SetVisibleRow') {
     $before = Get-ProgramsNavSnapshot $grid
     try {
@@ -348,13 +346,24 @@ function Set-ProgramsVisibleRow($grid, [int]$index, [string]$key = 'SetVisibleRo
         if ($displayed -ge $grid.Rows.Count) { return } # everything fits
         $first = $grid.FirstDisplayedScrollingRowIndex
         if ($index -le $first) {
-            $grid.FirstDisplayedScrollingRowIndex = $index
-        } elseif ($index -ge ($first + $displayed - 1)) {
-            $newFirst = $index - $displayed + 2
-            if ($newFirst -lt 0) { $newFirst = 0 }
+            if ($first -ne $index) { $grid.FirstDisplayedScrollingRowIndex = $index }
+        } else {
+            # 10th visible line (0-based 9); smaller grids fall back to
+            # keeping one row of context below the current row.
+            $marginTop = [math]::Min(9, $displayed - 1)
+            $wantFirst = $index - $marginTop
+            if ($wantFirst -lt 0) { $wantFirst = 0 }
             $maxFirst = $grid.Rows.Count - $displayed
-            if ($newFirst -gt $maxFirst) { $newFirst = $maxFirst }
-            $grid.FirstDisplayedScrollingRowIndex = $newFirst
+            if ($wantFirst -gt $maxFirst) { $wantFirst = $maxFirst }
+            if ($wantFirst -gt $first) {
+                $grid.FirstDisplayedScrollingRowIndex = $wantFirst
+            } elseif ($index -ge ($first + $displayed)) {
+                # Below the viewport entirely (shouldn't happen): snap minimally.
+                $snap = $index - $displayed + 1
+                if ($snap -lt 0) { $snap = 0 }
+                if ($snap -gt $maxFirst) { $snap = $maxFirst }
+                $grid.FirstDisplayedScrollingRowIndex = $snap
+            }
         }
     } catch {
         Write-ProgramsNavLog -Key $key -Grid $grid -Before $before -Exception $_.Exception.Message -Phase 'scroll-catch'
