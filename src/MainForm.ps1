@@ -100,7 +100,7 @@ function New-AppShell {
     $script:form.Controls.Add($strip)
 
     $script:NavTable = New-Object System.Windows.Forms.TableLayoutPanel
-    $script:NavTable.Location = New-Object System.Drawing.Point(10, 110)
+    $script:NavTable.Location = New-Object System.Drawing.Point(10, 48)
     $script:NavTable.Size = New-Object System.Drawing.Size(904, 42)
     $script:NavTable.Anchor = 'Top, Left, Right'
     $script:NavTable.BackColor = $T.Bg
