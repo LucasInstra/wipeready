@@ -61,10 +61,13 @@ function Add-ProgramsTab {
         }
         $g = $script:ProgramsGrid
         if ($g -and $g.Rows.Count -gt 0) {
+            $before = Get-ProgramsNavSnapshot $g
             try {
                 $g.CurrentCell = $g.Rows[0].Cells['Keep']
                 $g.FirstDisplayedScrollingRowIndex = 0
-            } catch { }
+            } catch {
+                Write-ProgramsNavLog -Key 'FilterReset' -Grid $g -Before $before -Exception $_.Exception.Message -Phase 'catch'
+            }
         }
     })
 
@@ -131,14 +134,23 @@ function Add-ProgramsTab {
         if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Down) {
             $g = $script:ProgramsGrid
             if ($g -and $g.Rows.Count -gt 0) {
-                $g.Focus()
-                $ri = 0
-                if ($g.CurrentCell) { $ri = $g.CurrentCell.RowIndex }
-                if ($ri -lt 0 -or $ri -ge $g.Rows.Count) { $ri = 0 }
-                $g.CurrentCell = $g.Rows[$ri].Cells['Keep']
-                Set-ProgramsVisibleRow $g $ri
-                $e.Handled = $true
-                $e.SuppressKeyPress = $true
+                $before = Get-ProgramsNavSnapshot $g
+                $navError = ''
+                try {
+                    $g.Focus()
+                    $ri = 0
+                    if ($g.CurrentCell) { $ri = $g.CurrentCell.RowIndex }
+                    if ($ri -lt 0 -or $ri -ge $g.Rows.Count) { $ri = 0 }
+                    $g.CurrentCell = $g.Rows[$ri].Cells['Keep']
+                    Set-ProgramsVisibleRow $g $ri 'SearchDown'
+                } catch {
+                    $navError = $_.Exception.Message
+                    Write-ProgramsNavLog -Key 'SearchDown' -Grid $g -Before $before -Exception $navError -Phase 'catch'
+                } finally {
+                    $e.Handled = $true
+                    $e.SuppressKeyPress = $true
+                    Write-ProgramsNavLog -Key 'SearchDown' -Grid $g -Before $before -Exception $navError
+                }
             }
         }
     })
@@ -147,13 +159,19 @@ function Add-ProgramsTab {
     # of the current row instead of a read-only text cell.
     $grid.Add_Enter({
         param($sender, $e)
-        if ($sender.Rows.Count -gt 0) {
-            $ri = 0
-            if ($sender.CurrentCell) { $ri = $sender.CurrentCell.RowIndex }
-            if ($ri -lt 0 -or $ri -ge $sender.Rows.Count) { $ri = 0 }
-            if ($sender.Columns.Contains('Keep')) {
-                $sender.CurrentCell = $sender.Rows[$ri].Cells['Keep']
+        $before = Get-ProgramsNavSnapshot $sender
+        try {
+            if ($sender.Rows.Count -gt 0) {
+                $ri = 0
+                if ($sender.CurrentCell) { $ri = $sender.CurrentCell.RowIndex }
+                if ($ri -lt 0 -or $ri -ge $sender.Rows.Count) { $ri = 0 }
+                if ($sender.Columns.Contains('Keep')) {
+                    $sender.CurrentCell = $sender.Rows[$ri].Cells['Keep']
+                    Set-ProgramsVisibleRow $sender $ri 'GridEnter'
+                }
             }
+        } catch {
+            Write-ProgramsNavLog -Key 'GridEnter' -Grid $sender -Before $before -Exception $_.Exception.Message -Phase 'catch'
         }
     })
 
@@ -177,43 +195,65 @@ function Add-ProgramsTab {
         elseif ($code -eq [System.Windows.Forms.Keys]::Up) { $delta = -1 }
         elseif ($code -eq [System.Windows.Forms.Keys]::Enter) { $delta = 1 }
         if (($delta -eq 0) -and (-not $isToggle)) { return }
-        $cur = $sender.CurrentCell
-        $ri = -1
-        if ($cur) { $ri = $cur.RowIndex }
-        if ($ri -lt 0) { $ri = 0 }
-        if ($isToggle) {
-            if ($ri -ge 0 -and $ri -lt $sender.Rows.Count) {
-                # Discard any pending checkbox edit so keyboard toggle applies once.
-                try { $sender.CancelEdit() } catch { }
-                $drv = $sender.Rows[$ri].DataBoundItem
-                if ($drv) {
-                    $drv['Keep'] = -not [bool]$drv['Keep']
-                    try { $sender.CommitEdit([System.Windows.Forms.DataGridViewDataErrorContexts]::Commit) } catch { }
-                    Update-ProgramsCount
-                    $sender.InvalidateRow($ri)
+        $before = Get-ProgramsNavSnapshot $sender
+        $navErrors = New-Object 'System.Collections.Generic.List[string]'
+        try {
+            $cur = $sender.CurrentCell
+            $ri = -1
+            if ($cur) { $ri = $cur.RowIndex }
+            if ($ri -lt 0) { $ri = 0 }
+            if ($isToggle) {
+                if ($ri -ge 0 -and $ri -lt $sender.Rows.Count) {
+                    # Discard any pending checkbox edit so keyboard toggle applies once.
+                    try { $sender.CancelEdit() } catch {
+                        $message = 'CancelEdit: ' + $_.Exception.Message
+                        [void]$navErrors.Add($message)
+                        Write-ProgramsNavLog -Key $code -Grid $sender -Before $before -Exception $message -Phase 'catch'
+                    }
+                    $drv = $sender.Rows[$ri].DataBoundItem
+                    if ($drv) {
+                        $drv['Keep'] = -not [bool]$drv['Keep']
+                        try { $sender.CommitEdit([System.Windows.Forms.DataGridViewDataErrorContexts]::Commit) } catch {
+                            $message = 'CommitEdit: ' + $_.Exception.Message
+                            [void]$navErrors.Add($message)
+                            Write-ProgramsNavLog -Key $code -Grid $sender -Before $before -Exception $message -Phase 'catch'
+                        }
+                        Update-ProgramsCount
+                        $sender.InvalidateRow($ri)
+                    }
+                }
+            } else {
+                try { $sender.CancelEdit() } catch {
+                    $message = 'CancelEdit: ' + $_.Exception.Message
+                    [void]$navErrors.Add($message)
+                    Write-ProgramsNavLog -Key $code -Grid $sender -Before $before -Exception $message -Phase 'catch'
                 }
             }
-        } else {
-            try { $sender.CancelEdit() } catch { }
-        }
-        if ($delta -ne 0) {
-            $next = $ri + $delta
-            if ($next -lt 0) { $next = 0 }
-            if ($next -ge $sender.Rows.Count) { $next = $sender.Rows.Count - 1 }
-            # Skip the new-row placeholder if it ever appears.
-            while (($next -ge 0) -and ($next -lt $sender.Rows.Count) -and $sender.Rows[$next].IsNewRow) {
-                $next -= [math]::Sign($delta)
+            if ($delta -ne 0) {
+                $next = $ri + $delta
+                if ($next -lt 0) { $next = 0 }
+                if ($next -ge $sender.Rows.Count) { $next = $sender.Rows.Count - 1 }
+                # Skip the new-row placeholder if it ever appears.
+                while (($next -ge 0) -and ($next -lt $sender.Rows.Count) -and $sender.Rows[$next].IsNewRow) {
+                    $next -= [math]::Sign($delta)
+                }
+                if (($next -ge 0) -and ($next -lt $sender.Rows.Count)) {
+                    $sender.CurrentCell = $sender.Rows[$next].Cells['Keep']
+                    Set-ProgramsVisibleRow $sender $next ([string]$code)
+                }
+            } else {
+                # Space: stay on the row but make sure it is visible.
+                Set-ProgramsVisibleRow $sender $ri ([string]$code)
             }
-            if (($next -ge 0) -and ($next -lt $sender.Rows.Count)) {
-                $sender.CurrentCell = $sender.Rows[$next].Cells['Keep']
-                Set-ProgramsVisibleRow $sender $next
-            }
-        } else {
-            # Space: stay on the row but make sure it is visible.
-            Set-ProgramsVisibleRow $sender $ri
+        } catch {
+            $message = 'KeyDown: ' + $_.Exception.Message
+            [void]$navErrors.Add($message)
+            Write-ProgramsNavLog -Key $code -Grid $sender -Before $before -Exception $message -Phase 'catch'
+        } finally {
+            $e.Handled = $true
+            $e.SuppressKeyPress = $true
+            Write-ProgramsNavLog -Key $code -Grid $sender -Before $before -Exception ([string]::Join('; ', $navErrors.ToArray()))
         }
-        $e.Handled = $true
-        $e.SuppressKeyPress = $true
     })
 
     $grid.Add_CurrentCellDirtyStateChanged({
@@ -221,21 +261,19 @@ function Add-ProgramsTab {
         if ($sender.IsCurrentCellDirty) { [void]$sender.CommitEdit('Commit') }
     })
     $grid.Add_CellValueChanged({ Update-ProgramsCount })
-    # Scrolling with the mouse or scrollbar does not change CurrentCell.
-    # Keep selection aligned with the visible rows so the next key press
-    # cannot jump back to a row that has scrolled out of view.
-    $grid.Add_Scroll({
+    # Do not snap CurrentCell from Scroll: DataGridView raises Scroll while
+    # its own ensure-visible logic and Set-ProgramsVisibleRow are moving the
+    # viewport. Key navigation plus SelectionChanged owns keyboard visibility.
+    $grid.Add_SelectionChanged({
         param($sender, $e)
+        $before = Get-ProgramsNavSnapshot $sender
         try {
-            $current = $sender.CurrentCell
-            $first = $sender.FirstDisplayedScrollingRowIndex
-            $displayed = $sender.DisplayedRowCount($false)
-            if ($current -and $displayed -gt 0 -and
-                ($current.RowIndex -lt $first -or $current.RowIndex -ge ($first + $displayed)) -and
-                $sender.Columns.Contains('Keep')) {
-                $sender.CurrentCell = $sender.Rows[$first].Cells['Keep']
+            if ($sender.CurrentCell) {
+                Set-ProgramsVisibleRow $sender $sender.CurrentCell.RowIndex 'SelectionChanged'
             }
-        } catch { }
+        } catch {
+            Write-ProgramsNavLog -Key 'SelectionChanged' -Grid $sender -Before $before -Exception $_.Exception.Message -Phase 'catch'
+        }
     })
     Update-ProgramsCount
     try {
@@ -301,7 +339,8 @@ function Update-ProgramsCount {
 # with one row of context below it (never riding the very bottom edge,
 # otherwise a single extra move leaves it off-screen before the next
 # scroll catches up).
-function Set-ProgramsVisibleRow($grid, [int]$index) {
+function Set-ProgramsVisibleRow($grid, [int]$index, [string]$key = 'SetVisibleRow') {
+    $before = Get-ProgramsNavSnapshot $grid
     try {
         if ($index -lt 0 -or $index -ge $grid.Rows.Count) { return }
         $displayed = $grid.DisplayedRowCount($false)
@@ -317,6 +356,73 @@ function Set-ProgramsVisibleRow($grid, [int]$index) {
             if ($newFirst -gt $maxFirst) { $newFirst = $maxFirst }
             $grid.FirstDisplayedScrollingRowIndex = $newFirst
         }
+    } catch {
+        Write-ProgramsNavLog -Key $key -Grid $grid -Before $before -Exception $_.Exception.Message -Phase 'scroll-catch'
+    }
+}
+
+function Get-ProgramsNavSnapshot($grid) {
+    $cell = '-'
+    try {
+        if ($grid.CurrentCell) {
+            $column = ''
+            if ($grid.CurrentCell.OwningColumn) { $column = $grid.CurrentCell.OwningColumn.Name }
+            $cell = '{0}:{1}' -f $grid.CurrentCell.RowIndex, $column
+        }
+    } catch { }
+    $first = -1
+    try { $first = $grid.FirstDisplayedScrollingRowIndex } catch { }
+    $displayed = -1
+    try { $displayed = $grid.DisplayedRowCount($false) } catch { }
+    $rows = -1
+    try { $rows = $grid.Rows.Count } catch { }
+    $focus = 'none'
+    try {
+        $form = $grid.FindForm()
+        $active = $form
+        while ($active -and $active.Controls.Count -gt 0) {
+            $focusedChild = $null
+            foreach ($candidate in $active.Controls) {
+                if ($candidate.Focused -or $candidate.ContainsFocus) {
+                    $focusedChild = $candidate
+                    break
+                }
+            }
+            if (-not $focusedChild) { break }
+            $active = $focusedChild
+        }
+        if ($active) { $focus = $active.GetType().Name }
+        elseif ($grid.Focused -or $grid.ContainsFocus) { $focus = $grid.GetType().Name }
+    } catch { }
+    return [pscustomobject]@{
+        Cell = $cell
+        First = $first
+        Displayed = $displayed
+        Rows = $rows
+        Focus = $focus
+    }
+}
+
+function Write-ProgramsNavLog {
+    param(
+        [string]$Key,
+        $Grid,
+        $Before,
+        [string]$Exception = '',
+        [string]$Phase = 'nav'
+    )
+    try {
+        if (-not $Before) { $Before = Get-ProgramsNavSnapshot $Grid }
+        $after = Get-ProgramsNavSnapshot $Grid
+        $keyText = $Key -replace '[\r\n|]', ' '
+        if ($keyText -eq 'Return') { $keyText = 'Enter' }
+        $exceptionText = $Exception -replace '[\r\n|]', ' '
+        if ([string]::IsNullOrWhiteSpace($exceptionText)) { $exceptionText = '-' }
+        $line = '{0:yyyy-MM-ddTHH:mm:ss.fff} key={1} phase={2} CurrentCell={3}->{4} FirstDisplayed={5}->{6} DisplayedRowCount={7}->{8} Rows={9}->{10} FocusedControl={11}->{12} Exception={13}' -f `
+            [DateTime]::Now, $keyText, $Phase, $Before.Cell, $after.Cell, $Before.First, $after.First, `
+            $Before.Displayed, $after.Displayed, $Before.Rows, $after.Rows, $Before.Focus, $after.Focus, $exceptionText
+        $path = Join-Path $env:TEMP 'wipeready-nav.log'
+        [System.IO.File]::AppendAllText($path, $line + [Environment]::NewLine, [System.Text.Encoding]::UTF8)
     } catch { }
 }
 
