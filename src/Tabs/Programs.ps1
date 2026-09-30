@@ -53,7 +53,7 @@ function Add-ProgramsTab {
     # use the sender argument, never function-locals like $txtSearch/$grid.
     $txtSearch.Add_TextChanged({
         param($sender, $e)
-        $q = $sender.Text.Replace("'", "''").Replace('[', '[[]').Replace('%', '[%]').Replace('*', '[*]')
+        $q = $sender.Text.Replace("'", "''").Replace('[', '[[]').Replace(']', '[]]').Replace('%', '[%]').Replace('*', '[*]')
         if ([string]::IsNullOrWhiteSpace($q)) {
             $script:ProgramsTable.DefaultView.RowFilter = ''
         } else {
@@ -123,10 +123,11 @@ function Add-ProgramsTab {
         $sel = @($script:ProgramsTable.Rows | Where-Object { $_['Keep'] -eq $true } | ForEach-Object {
             [pscustomobject]@{ Program = $_['Program']; Version = $_['Version']; Publisher = $_['Publisher'] }
         })
-        $sel | ConvertTo-Json -Depth 3 | Out-File (Join-Path $script:OutDir 'selection.json') -Encoding UTF8
+        # -InputObject keeps it a JSON array even with 0 or 1 items.
+        ConvertTo-Json -InputObject @($sel) -Depth 3 | Out-File (Join-Path $script:OutDir 'selection.json') -Encoding UTF8
         $sel | Export-Csv (Join-Path $script:OutDir 'selection.csv') -NoTypeInformation -Encoding UTF8
         Set-Status "Selection saved: $($sel.Count) programs." -Kind Success
-        [System.Windows.Forms.MessageBox]::Show("Selection saved ($($sel.Count) programs).", 'WipeReady')
+        [void][System.Windows.Forms.MessageBox]::Show("Selection saved ($($sel.Count) programs).", 'WipeReady')
     })
     $row.Controls.Add($btnSave)
     Add-Tip $btnSave 'Writes selection.json and selection.csv to Desktop\wipeready'
@@ -141,5 +142,10 @@ function Add-ProgramsTab {
 function Update-ProgramsCount {
     $total = $script:ProgramsTable.Rows.Count
     $kept = @($script:ProgramsTable.Rows | Where-Object { $_['Keep'] -eq $true }).Count
-    $script:ProgramsCountLabel.Text = "$kept of $total selected"
+    $text = "$kept of $total selected"
+    $filter = $script:ProgramsTable.DefaultView.RowFilter
+    if (-not [string]::IsNullOrWhiteSpace($filter)) {
+        $text += " (" + $script:ProgramsTable.DefaultView.Count + " shown)"
+    }
+    $script:ProgramsCountLabel.Text = $text
 }

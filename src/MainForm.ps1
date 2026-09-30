@@ -80,6 +80,12 @@ function New-AppShell {
     $script:statusPath.Alignment = 'Right'
     $script:status.Items.Add($script:statusPath) | Out-Null
     $script:form.Controls.Add($script:status)
+
+    $script:form.Add_FormClosed({
+        foreach ($f in @($FontUI, $FontTitle, $FontSection, $FontMono, $FontBoldUI)) {
+            if ($f) { $f.Dispose() }
+        }
+    })
 }
 
 function Register-Page([string]$title, $panel) {

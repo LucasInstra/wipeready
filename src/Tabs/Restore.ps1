@@ -82,17 +82,18 @@ function Add-RestoreTab {
         try {
             Set-Status 'Exporting winget list...' -Kind Busy
             winget export -o (Join-Path $script:OutDir 'reinstall.json') --include-versions | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "winget export failed (exit $LASTEXITCODE)." }
             Set-Status 'reinstall.json created. After formatting: winget import -i reinstall.json' -Kind Success
         } catch {
             Set-Status 'Winget export failed.' -Kind Error
-            [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'WipeReady')
+            [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'WipeReady')
         }
     })
     $row.Controls.Add($btnWinget)
     Add-Tip $btnWinget 'Writes reinstall.json with exact versions to Desktop\wipeready'
 
     $btnOpen = New-StyledButton 'Open folder'
-    $btnOpen.Add_Click({ Invoke-Item $script:OutDir })
+    $btnOpen.Add_Click({ Invoke-Item $script:OutDir | Out-Null })
     $row.Controls.Add($btnOpen)
 
     $note = New-OutputNote ''

@@ -21,7 +21,10 @@ function Get-HardwareSummary {
 function Get-InstalledPrograms {
     $paths = @(
         'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
-        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+        # Per-user installs. NOTE: when elevated with different admin
+        # credentials, HKCU is that admin's hive, not the user's.
+        'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'
     )
     Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
         Where-Object { $_.DisplayName } |

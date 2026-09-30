@@ -5,7 +5,7 @@
 $root = Split-Path -Parent $PSScriptRoot
 $entry = Get-Content (Join-Path $root 'src/App.ps1') -Raw
 
-$bundle = [regex]::Replace($entry, '(?m)^\s*\.\s*"\$PSScriptRoot/([^"]+)"\s*$', {
+$bundle = [regex]::Replace($entry, '(?m)^\s*\.\s*"\$PSScriptRoot/([^"]+)"\s*(#.*)?$', {
     param($m)
     "`n# ===== bundled: src/$($m.Groups[1].Value) =====`n" +
         (Get-Content (Join-Path $root ('src/' + $m.Groups[1].Value)) -Raw)

@@ -24,18 +24,25 @@ function Add-BackupTab {
 
     $btnScan = New-StyledButton 'Scan folders'
     $btnScan.Add_Click({
-        Set-Status 'Scanning folders... (may take a while depending on file volume)' -Kind Busy
-        $script:form.Refresh()
-        $script:FolderList.Items.Clear()
-        foreach ($f in (Get-UserFolderSizes)) {
-            $item = New-Object System.Windows.Forms.ListViewItem($f.Folder)
-            [void]$item.SubItems.Add("$($f.GB)")
-            if ($f.Folder -ne 'AppData') { $item.Checked = $true }
-            $script:FolderList.Items.Add($item) | Out-Null
+        try {
+            Set-Status 'Scanning folders... (may take a while depending on file volume)' -Kind Busy
+            $script:form.Refresh()
+            $script:FolderList.Items.Clear()
+            foreach ($f in (Get-UserFolderSizes)) {
+                $item = New-Object System.Windows.Forms.ListViewItem($f.Folder)
+                [void]$item.SubItems.Add("$($f.GB)")
+                # Numeric value on Tag: no culture-dependent text round-trip.
+                $item.Tag = [double]$f.GB
+                if ($f.Folder -ne 'AppData') { $item.Checked = $true }
+                $script:FolderList.Items.Add($item) | Out-Null
+            }
+            $script:BackupEmptyHint.Visible = $false
+            Update-BackupTotal
+            Set-Status 'Scan complete. Uncheck anything that should not go to backup.' -Kind Success
+        } catch {
+            Set-Status 'Folder scan failed.' -Kind Error
+            [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'WipeReady')
         }
-        $script:BackupEmptyHint.Visible = $false
-        Update-BackupTotal
-        Set-Status 'Scan complete. Uncheck anything that should not go to backup.' -Kind Success
     })
     $bar.Controls.Add($btnScan)
     Add-Tip $btnScan 'Measures each user folder (Desktop, Documents, ...)'
@@ -44,13 +51,14 @@ function Add-BackupTab {
     $btnCopy.Add_Click({
         $sel = @($script:FolderList.CheckedItems)
         if ($sel.Count -eq 0) {
-            [System.Windows.Forms.MessageBox]::Show('Check at least one folder.', 'WipeReady')
+            [void][System.Windows.Forms.MessageBox]::Show('Check at least one folder.', 'WipeReady')
             return
         }
         $dlg = New-Object System.Windows.Forms.FolderBrowserDialog
         $dlg.Description = 'Pick the destination folder on the external drive'
-        if ($dlg.ShowDialog() -ne 'OK') { return }
+        if ($dlg.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
         $i = 0
+        $failed = $false
         foreach ($item in $sel) {
             $i++
             $src = Join-Path $env:USERPROFILE $item.Text
@@ -59,11 +67,17 @@ function Add-BackupTab {
             $script:form.Refresh()
             robocopy "$src" "$dst" /E /R:2 /W:2 /MT:8 /NFL /NDL /NJH /NJS | Out-Null
             if ($LASTEXITCODE -ge 8) {
-                [System.Windows.Forms.MessageBox]::Show("Failed to copy $($item.Text).", 'WipeReady')
+                $failed = $true
+                [void][System.Windows.Forms.MessageBox]::Show("Failed to copy $($item.Text).", 'WipeReady')
             }
         }
-        Set-Status 'Folder backup complete.' -Kind Success
-        [System.Windows.Forms.MessageBox]::Show('Folder backup complete.', 'WipeReady')
+        if ($failed) {
+            Set-Status 'Backup finished with errors. Check the messages above.' -Kind Warn
+            [void][System.Windows.Forms.MessageBox]::Show('Backup finished with errors.', 'WipeReady')
+        } else {
+            Set-Status 'Folder backup complete.' -Kind Success
+            [void][System.Windows.Forms.MessageBox]::Show('Folder backup complete.', 'WipeReady')
+        }
     })
     $bar.Controls.Add($btnCopy)
     Add-Tip $btnCopy 'Copies checked folders to the drive you pick'
@@ -71,7 +85,7 @@ function Add-BackupTab {
     $btnOpen = New-StyledButton 'Open folder' 140
     $btnOpen.Add_Click({
         if ($script:FolderList.FocusedItem) {
-            Invoke-Item (Join-Path $env:USERPROFILE $script:FolderList.FocusedItem.Text)
+            Invoke-Item (Join-Path $env:USERPROFILE $script:FolderList.FocusedItem.Text) | Out-Null
         }
     })
     $bar.Controls.Add($btnOpen)
@@ -131,9 +145,7 @@ function Add-BackupTab {
 function Update-BackupTotal {
     $total = 0
     foreach ($item in $script:FolderList.CheckedItems) {
-        $v = 0
-        [void][double]::TryParse($item.SubItems[1].Text, [ref]$v)
-        $total += $v
+        if ($item.Tag -is [double]) { $total += $item.Tag }
     }
     $script:BackupTotalLabel.Text = "Selected for backup: $([math]::Round($total, 2)) GB"
 }
