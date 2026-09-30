@@ -5,25 +5,11 @@ Add-Type -ReferencedAssemblies @('System.Windows.Forms') -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-public static class Dwm {
-    [DllImport("dwmapi.dll", PreserveSig = true)]
-    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int val, int size);
-}
 public static class Shcore {
     [DllImport("shcore.dll", PreserveSig = true)]
     public static extern int SetProcessDpiAwareness(int value);
 }
 '@
-
-# Dark caption bar (Win11, falls back to Win10). The min/max/close
-# buttons stay native: WinForms cannot recolor them per-app.
-function Set-DarkTitleBar($form) {
-    try {
-        $val = 1
-        $r = [Dwm]::DwmSetWindowAttribute($form.Handle, 20, [ref]$val, 4)
-        if ($r -ne 0) { [void][Dwm]::DwmSetWindowAttribute($form.Handle, 19, [ref]$val, 4) }
-    } catch { }
-}
 
 # Crisp rendering on HiDPI/scaled displays. Must run before any window exists.
 function Set-DpiAwareness {

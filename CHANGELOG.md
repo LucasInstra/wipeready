@@ -1,6 +1,11 @@
 # Changelog
 
-## 2.0.4
+## 2.1.0
+
+- Borderless window with custom title bar (drag, minimize, maximize, close, resize grip)
+- Custom dark navigation (no white TabControl chrome), per-monitor DPI
+- UTF-8 BOM everywhere (no more garbled characters)
+- Resize-loop and event-scope hardening
 
 - Exports verify completion (`$LASTEXITCODE` for winget/netsh, `-ErrorAction Stop` for drivers)
 - Backup reports partial failures instead of always succeeding
