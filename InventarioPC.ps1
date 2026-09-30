@@ -1,4 +1,4 @@
-# InventarioPC - inventário pré-formatação com interface gráfica
+﻿# InventarioPC - inventário pré-formatação com interface gráfica
 # Uso (no PC pessoal, como administrador):
 #   powershell -ExecutionPolicy Bypass -File InventarioPC.ps1
 
