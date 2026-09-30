@@ -1,6 +1,9 @@
 # Changelog
 
-## 2.1.1
+## 2.1.2
+
+- Title bar uses flow layout (version never overlapped/clipped); header
+  shows a single purpose line instead of the repeated app name
 
 - Title-bar icons are drawn (no font glyphs): minimize, maximize/restore, close
 

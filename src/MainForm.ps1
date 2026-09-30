@@ -24,21 +24,32 @@ function New-AppShell {
     $script:titleBar.BackColor = $T.Panel
     $script:form.Controls.Add($script:titleBar)
 
+    # Left flow: app name + version side by side (never overlaps, any DPI).
+    $titleFlow = New-Object System.Windows.Forms.FlowLayoutPanel
+    $titleFlow.Dock = 'Left'
+    $titleFlow.AutoSize = $true
+    $titleFlow.AutoSizeMode = 'GrowAndShrink'
+    $titleFlow.BackColor = $T.Panel
+    $titleFlow.FlowDirection = 'LeftToRight'
+    $titleFlow.WrapContents = $false
+    $titleFlow.Padding = New-Object System.Windows.Forms.Padding(12, 7, 0, 0)
+    $script:titleBar.Controls.Add($titleFlow)
+
     $lblApp = New-Object System.Windows.Forms.Label
     $lblApp.Text = 'WipeReady'
     $lblApp.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
     $lblApp.ForeColor = $T.Accent
     $lblApp.AutoSize = $true
-    $lblApp.Location = New-Object System.Drawing.Point(12, 8)
-    $script:titleBar.Controls.Add($lblApp)
+    $lblApp.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 0)
+    $titleFlow.Controls.Add($lblApp)
 
     $lblVer = New-Object System.Windows.Forms.Label
     $lblVer.Text = "v$script:Version"
     $lblVer.Font = $FontUI
     $lblVer.ForeColor = $T.Muted
     $lblVer.AutoSize = $true
-    $lblVer.Location = New-Object System.Drawing.Point(92, 10)
-    $script:titleBar.Controls.Add($lblVer)
+    $lblVer.Margin = New-Object System.Windows.Forms.Padding(6, 2, 0, 0)
+    $titleFlow.Controls.Add($lblVer)
 
     $script:btnMin = New-TitleButton 'min'
     $script:btnMax = New-TitleButton 'max'
@@ -89,20 +100,13 @@ function New-AppShell {
     $header.BackColor = $T.Panel
     $script:form.Controls.Add($header)
 
-    $lblTitle = New-Object System.Windows.Forms.Label
-    $lblTitle.Text = 'WipeReady'
-    $lblTitle.Font = $FontTitle
-    $lblTitle.ForeColor = $T.Accent
-    $lblTitle.AutoSize = $true
-    $lblTitle.Location = New-Object System.Drawing.Point(16, 6)
-    $header.Controls.Add($lblTitle)
-
+    # Single purpose line (no repeated app name, no fixed stacking to clip).
     $lblSub = New-Object System.Windows.Forms.Label
     $lblSub.Text = "Pre-format inventory  •  pick what to keep before wiping"
-    $lblSub.Font = $FontUI
-    $lblSub.ForeColor = $T.Muted
+    $lblSub.Font = New-Object System.Drawing.Font('Segoe UI', 11)
+    $lblSub.ForeColor = $T.Text
     $lblSub.AutoSize = $true
-    $lblSub.Location = New-Object System.Drawing.Point(18, 36)
+    $lblSub.Location = New-Object System.Drawing.Point(18, 20)
     $header.Controls.Add($lblSub)
 
     $strip = New-Object System.Windows.Forms.Panel
