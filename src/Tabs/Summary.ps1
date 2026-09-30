@@ -2,12 +2,10 @@
 # Same data (Get-HardwareSummary) and same handlers/outputs as before.
 
 function Add-SummaryTab {
-    $tab = New-Object System.Windows.Forms.TabPage
-    $tab.Text = 'Summary'
+    $tab = New-Object System.Windows.Forms.Panel
     $tab.BackColor = $T.Bg
     $tab.Padding = New-Object System.Windows.Forms.Padding(12)
     $tab.AutoScroll = $true
-    $script:tabs.TabPages.Add($tab) | Out-Null
 
     $tab.Controls.Add((New-SectionHeader 'Machine summary' 'Hardware, OS and product key collected from this PC.'))
 
@@ -123,4 +121,5 @@ function Add-SummaryTab {
     $note = New-OutputNote ''
     $note.Location = New-Object System.Drawing.Point(14, 96)
     $cardExp.Controls.Add($note)
+    return $tab
 }

@@ -9,12 +9,9 @@ public static class Dwm {
     [DllImport("dwmapi.dll", PreserveSig = true)]
     public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int val, int size);
 }
-public class BorderlessTabControl : TabControl {
-    private const int TCM_ADJUSTRECT = 0x1328;
-    protected override void WndProc(ref Message m) {
-        if (m.Msg == TCM_ADJUSTRECT) { m.Result = (IntPtr)1; return; }
-        base.WndProc(ref m);
-    }
+public static class Shcore {
+    [DllImport("shcore.dll", PreserveSig = true)]
+    public static extern int SetProcessDpiAwareness(int value);
 }
 '@
 
@@ -26,6 +23,11 @@ function Set-DarkTitleBar($form) {
         $r = [Dwm]::DwmSetWindowAttribute($form.Handle, 20, [ref]$val, 4)
         if ($r -ne 0) { [void][Dwm]::DwmSetWindowAttribute($form.Handle, 19, [ref]$val, 4) }
     } catch { }
+}
+
+# Crisp rendering on HiDPI/scaled displays. Must run before any window exists.
+function Set-DpiAwareness {
+    try { [void][Shcore]::SetProcessDpiAwareness(2) } catch { }
 }
 
 $T = @{
@@ -42,6 +44,7 @@ $T = @{
     Error     = [System.Drawing.ColorTranslator]::FromHtml('#f87171')
 }
 $FontUI      = New-Object System.Drawing.Font('Segoe UI', 9)
+$FontBoldUI  = New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
 $FontTitle   = New-Object System.Drawing.Font('Segoe UI', 15, [System.Drawing.FontStyle]::Bold)
 $FontSection = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]::Bold)
 $FontMono    = New-Object System.Drawing.Font('Consolas', 10)

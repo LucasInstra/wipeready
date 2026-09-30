@@ -2,12 +2,10 @@
 # Same scan, same robocopy arguments, same outputs. Only layout changed.
 
 function Add-BackupTab {
-    $tab = New-Object System.Windows.Forms.TabPage
-    $tab.Text = 'Backup'
+    $tab = New-Object System.Windows.Forms.Panel
     $tab.BackColor = $T.Bg
     $tab.Padding = New-Object System.Windows.Forms.Padding(12)
     $tab.AutoScroll = $true
-    $script:tabs.TabPages.Add($tab) | Out-Null
 
     $tab.Controls.Add((New-SectionHeader 'Folders and backup' 'Scan, check what matters, copy to the external drive. AppData starts unchecked.'))
 
@@ -124,6 +122,7 @@ function Add-BackupTab {
     $lblGuide.ForeColor = $T.Muted
     $lblGuide.Font = $FontUI
     $tab.Controls.Add($lblGuide)
+    return $tab
 }
 
 function Update-BackupTotal {

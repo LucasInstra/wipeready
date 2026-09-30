@@ -1,5 +1,7 @@
-﻿# WipeReady main window shell (header, owner-drawn tabs, status bar)
+﻿# WipeReady main window shell (header, custom nav, pages, status bar)
 # Layout only. No data collection and no export logic here.
+# Navigation is a custom button row (not TabControl): no OS-themed chrome,
+# so there is no white frame, no strip and nothing to owner-draw.
 
 function New-AppShell {
     $script:form = New-Object System.Windows.Forms.Form
@@ -42,31 +44,26 @@ function New-AppShell {
     $strip.BackColor = $T.Accent
     $script:form.Controls.Add($strip)
 
-    $script:tabs = New-Object BorderlessTabControl
-    $script:tabs.Location = New-Object System.Drawing.Point(10, 74)
-    $script:tabs.Size = New-Object System.Drawing.Size(904, 482)
-    $script:tabs.Anchor = 'Top, Bottom, Left, Right'
-    $script:tabs.BackColor = $T.Bg
-    $script:tabs.DrawMode = 'OwnerDrawFixed'
-    $script:tabs.SizeMode = 'Fixed'
-    $script:tabs.ItemSize = New-Object System.Drawing.Size(170, 34)
-    $script:tabs.Font = $FontUI
-    $script:form.Controls.Add($script:tabs)
-    $script:tabs.Add_Resize({ Update-TabWidths })
+    $script:NavTable = New-Object System.Windows.Forms.TableLayoutPanel
+    $script:NavTable.Location = New-Object System.Drawing.Point(10, 74)
+    $script:NavTable.Size = New-Object System.Drawing.Size(904, 42)
+    $script:NavTable.Anchor = 'Top, Left, Right'
+    $script:NavTable.BackColor = $T.Bg
+    $script:NavTable.ColumnCount = 0
+    $script:NavTable.RowCount = 1
+    $script:NavTable.RowStyles.Add((New-Object System.Windows.Forms.RowStyle(
+        [System.Windows.Forms.SizeType]::Absolute, 42))) | Out-Null
+    $script:form.Controls.Add($script:NavTable)
 
-    $script:tabs.Add_DrawItem({
-        param($s, $e)
-        $selected = ($e.Index -eq $s.SelectedIndex)
-        $bg = if ($selected) { $T.Accent } else { $T.Panel }
-        $fg = if ($selected) { $T.Bg } else { $T.Text }
-        $brush = New-Object System.Drawing.SolidBrush($bg)
-        $e.Graphics.FillRectangle($brush, $e.Bounds)
-        $brush.Dispose()
-        $flags = [System.Windows.Forms.TextFormatFlags]::HorizontalCenter -bor `
-                 [System.Windows.Forms.TextFormatFlags]::VerticalCenter
-        [System.Windows.Forms.TextRenderer]::DrawText($e.Graphics,
-            $s.TabPages[$e.Index].Text, $e.Font, $e.Bounds, $fg, $flags)
-    })
+    $script:PagesPanel = New-Object System.Windows.Forms.Panel
+    $script:PagesPanel.Location = New-Object System.Drawing.Point(10, 122)
+    $script:PagesPanel.Size = New-Object System.Drawing.Size(904, 434)
+    $script:PagesPanel.Anchor = 'Top, Bottom, Left, Right'
+    $script:PagesPanel.BackColor = $T.Bg
+    $script:form.Controls.Add($script:PagesPanel)
+
+    $script:PagePanels = @()
+    $script:NavButtons = @()
 
     $script:Tips = New-Object System.Windows.Forms.ToolTip
 
@@ -85,6 +82,46 @@ function New-AppShell {
     $script:form.Controls.Add($script:status)
 }
 
+function Register-Page([string]$title, $panel) {
+    $panel.Dock = 'Fill'
+    $panel.Visible = $false
+    $script:PagesPanel.Controls.Add($panel)
+    $script:PagePanels += $panel
+    $idx = $script:PagePanels.Count - 1
+
+    $script:NavTable.ColumnCount = $script:PagePanels.Count
+    $script:NavTable.ColumnStyles.Clear()
+    for ($i = 0; $i -lt $script:PagePanels.Count; $i++) {
+        [void]$script:NavTable.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
+            [System.Windows.Forms.SizeType]::Percent, (100 / $script:PagePanels.Count))))
+    }
+
+    $b = New-StyledButton $title
+    $b.Dock = 'Fill'
+    $b.Margin = New-Object System.Windows.Forms.Padding(0, 0, 6, 0)
+    $j = $idx
+    $b.Add_Click({ Show-Page $j }.GetNewClosure())
+    $script:NavTable.Controls.Add($b, $idx, 0)
+    $script:NavButtons += $b
+}
+
+function Show-Page([int]$index) {
+    for ($i = 0; $i -lt $script:PagePanels.Count; $i++) {
+        $active = ($i -eq $index)
+        $script:PagePanels[$i].Visible = $active
+        $btn = $script:NavButtons[$i]
+        if ($active) {
+            $btn.BackColor = $T.Accent
+            $btn.ForeColor = $T.Bg
+            $btn.Font = $FontBoldUI
+        } else {
+            $btn.BackColor = $T.Panel
+            $btn.ForeColor = $T.Text
+            $btn.Font = $FontUI
+        }
+    }
+}
+
 function Set-Status([string]$msg, [string]$Kind = 'Normal') {
     $script:statusLabel.Text = $msg
     $script:statusLabel.ForeColor = switch ($Kind) {
@@ -100,25 +137,5 @@ function Set-Status([string]$msg, [string]$Kind = 'Normal') {
 function Show-App {
     [void]$script:form.Handle
     Set-DarkTitleBar $script:form
-    Update-TabWidths
     [void]$script:form.ShowDialog()
-}
-
-# Tabs always fill the full row width (no unpainted strip on the right).
-# Guards: changing ItemSize re-runs layout, which can synchronously fire
-# Resize again. Without the reentrancy flag + change check below, that
-# nesting overflows the call stack ("profundidade de chamada").
-$script:UpdatingTabs = $false
-function Update-TabWidths {
-    if ($script:UpdatingTabs) { return }
-    if ($script:tabs.TabPages.Count -eq 0) { return }
-    $w = [math]::Floor($script:tabs.ClientSize.Width / $script:tabs.TabPages.Count)
-    if ($w -lt 80) { $w = 80 }
-    if ($script:tabs.ItemSize.Width -eq $w) { return }
-    $script:UpdatingTabs = $true
-    try {
-        $script:tabs.ItemSize = New-Object System.Drawing.Size($w, 34)
-    } finally {
-        $script:UpdatingTabs = $false
-    }
 }

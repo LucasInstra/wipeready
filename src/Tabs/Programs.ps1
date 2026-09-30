@@ -2,12 +2,10 @@
 # Same data source, same selection.json/selection.csv outputs.
 
 function Add-ProgramsTab {
-    $tab = New-Object System.Windows.Forms.TabPage
-    $tab.Text = 'Programs'
+    $tab = New-Object System.Windows.Forms.Panel
     $tab.BackColor = $T.Bg
     $tab.Padding = New-Object System.Windows.Forms.Padding(12)
     $tab.AutoScroll = $true
-    $script:tabs.TabPages.Add($tab) | Out-Null
 
     $tab.Controls.Add((New-SectionHeader 'Installed programs' 'Check what to keep. Save writes selection.json and selection.csv.'))
 
@@ -78,15 +76,19 @@ function Add-ProgramsTab {
         $script:ProgramsTable.Rows.Add($row) | Out-Null
     }
     $grid.DataSource = $script:ProgramsTable
-    $grid.Columns['Keep'].ReadOnly = $false
-    $grid.Columns['Program'].ReadOnly = $true
-    $grid.Columns['Version'].ReadOnly = $true
-    $grid.Columns['Publisher'].ReadOnly = $true
-    Style-Grid $grid
-    $grid.Columns['Keep'].FillWeight = 18
-    $grid.Columns['Program'].FillWeight = 52
-    $grid.Columns['Version'].FillWeight = 15
-    $grid.Columns['Publisher'].FillWeight = 15
+    # Columns only exist once the grid handle is created (reliable both
+    # headless and shown). Reapplying is idempotent.
+    $grid.Add_HandleCreated({
+        $grid.Columns['Keep'].ReadOnly = $false
+        $grid.Columns['Program'].ReadOnly = $true
+        $grid.Columns['Version'].ReadOnly = $true
+        $grid.Columns['Publisher'].ReadOnly = $true
+        Style-Grid $grid
+        $grid.Columns['Keep'].FillWeight = 18
+        $grid.Columns['Program'].FillWeight = 52
+        $grid.Columns['Version'].FillWeight = 15
+        $grid.Columns['Publisher'].FillWeight = 15
+    })
 
     $grid.Add_CurrentCellDirtyStateChanged({
         if ($grid.IsCurrentCellDirty) { [void]$grid.CommitEdit('Commit') }
@@ -130,6 +132,7 @@ function Add-ProgramsTab {
     $note.Location = New-Object System.Drawing.Point(12, 398)
     $note.Anchor = 'Bottom, Left, Right'
     $tab.Controls.Add($note)
+    return $tab
 }
 
 function Update-ProgramsCount {

@@ -2,12 +2,10 @@
 # Same step texts, same command, same reinstall.json output.
 
 function Add-RestoreTab {
-    $tab = New-Object System.Windows.Forms.TabPage
-    $tab.Text = 'Restore'
+    $tab = New-Object System.Windows.Forms.Panel
     $tab.BackColor = $T.Bg
     $tab.Padding = New-Object System.Windows.Forms.Padding(12)
     $tab.AutoScroll = $true
-    $script:tabs.TabPages.Add($tab) | Out-Null
 
     $tab.Controls.Add((New-SectionHeader 'After formatting' 'Reinstall in order. Everything the app saved lives in Desktop\wipeready.'))
 
@@ -97,4 +95,5 @@ function Add-RestoreTab {
     $note = New-OutputNote ''
     $note.Location = New-Object System.Drawing.Point(14, 96)
     $cardAct.Controls.Add($note)
+    return $tab
 }

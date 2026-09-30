@@ -29,9 +29,12 @@ New-Item -ItemType Directory -Force -Path (Join-Path $script:OutDir 'wifi') | Ou
 . "$PSScriptRoot/Tabs/Backup.ps1"
 . "$PSScriptRoot/Tabs/Restore.ps1"
 
+Set-DpiAwareness
+
 New-AppShell
-Add-SummaryTab
-Add-ProgramsTab
-Add-BackupTab
-Add-RestoreTab
+Register-Page 'Summary' (Add-SummaryTab)
+Register-Page 'Programs' (Add-ProgramsTab)
+Register-Page 'Backup' (Add-BackupTab)
+Register-Page 'Restore' (Add-RestoreTab)
+Show-Page 0
 Show-App
