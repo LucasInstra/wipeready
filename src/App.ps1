@@ -4,7 +4,7 @@
 
 #Requires -Version 5.1
 
-$script:Version = '2.0.1'
+$script:Version = '2.0.2'
 
 # --- self-elevate ---
 $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)

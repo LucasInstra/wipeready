@@ -46,8 +46,11 @@ function Add-ProgramsTab {
     $searchPanel.Controls.Add($lblCount)
     $script:ProgramsCountLabel = $lblCount
 
+    # NOTE: event handlers run after this function returns, so they must
+    # use the sender argument, never function-locals like $txtSearch/$grid.
     $txtSearch.Add_TextChanged({
-        $q = $txtSearch.Text.Replace("'", "''").Replace('[', '[[]').Replace('%', '[%]').Replace('*', '[*]')
+        param($sender, $e)
+        $q = $sender.Text.Replace("'", "''").Replace('[', '[[]').Replace('%', '[%]').Replace('*', '[*]')
         if ([string]::IsNullOrWhiteSpace($q)) {
             $script:ProgramsTable.DefaultView.RowFilter = ''
         } else {
@@ -76,22 +79,19 @@ function Add-ProgramsTab {
         $script:ProgramsTable.Rows.Add($row) | Out-Null
     }
     $grid.DataSource = $script:ProgramsTable
-    # Columns only exist once the grid handle is created (reliable both
-    # headless and shown). Reapplying is idempotent.
-    $grid.Add_HandleCreated({
-        $grid.Columns['Keep'].ReadOnly = $false
-        $grid.Columns['Program'].ReadOnly = $true
-        $grid.Columns['Version'].ReadOnly = $true
-        $grid.Columns['Publisher'].ReadOnly = $true
-        Style-Grid $grid
-        $grid.Columns['Keep'].FillWeight = 18
-        $grid.Columns['Program'].FillWeight = 52
-        $grid.Columns['Version'].FillWeight = 15
-        $grid.Columns['Publisher'].FillWeight = 15
-    })
+    $grid.Columns['Keep'].ReadOnly = $false
+    $grid.Columns['Program'].ReadOnly = $true
+    $grid.Columns['Version'].ReadOnly = $true
+    $grid.Columns['Publisher'].ReadOnly = $true
+    Style-Grid $grid
+    $grid.Columns['Keep'].FillWeight = 18
+    $grid.Columns['Program'].FillWeight = 52
+    $grid.Columns['Version'].FillWeight = 15
+    $grid.Columns['Publisher'].FillWeight = 15
 
     $grid.Add_CurrentCellDirtyStateChanged({
-        if ($grid.IsCurrentCellDirty) { [void]$grid.CommitEdit('Commit') }
+        param($sender, $e)
+        if ($sender.IsCurrentCellDirty) { [void]$sender.CommitEdit('Commit') }
     })
     $grid.Add_CellValueChanged({ Update-ProgramsCount })
     Update-ProgramsCount
