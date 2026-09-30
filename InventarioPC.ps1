@@ -14,6 +14,71 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
+# ---------------- Tema escuro ----------------
+$T = @{
+    Bg      = [System.Drawing.ColorTranslator]::FromHtml('#0f172a')
+    Panel   = [System.Drawing.ColorTranslator]::FromHtml('#1e293b')
+    Accent  = [System.Drawing.ColorTranslator]::FromHtml('#38bdf8')
+    Hover   = [System.Drawing.ColorTranslator]::FromHtml('#2b4a67')
+    Text    = [System.Drawing.ColorTranslator]::FromHtml('#e2e8f0')
+    GridAlt = [System.Drawing.ColorTranslator]::FromHtml('#16213a')
+}
+$FontUI = New-Object System.Drawing.Font('Segoe UI', 9)
+
+function Apply-Theme([System.Windows.Forms.Control]$root) {
+    foreach ($c in $root.Controls) {
+        if ($c -is [System.Windows.Forms.Button]) {
+            $c.FlatStyle = 'Flat'
+            $c.UseVisualStyleBackColor = $false
+            $c.BackColor = $T.Panel
+            $c.ForeColor = $T.Text
+            $c.FlatAppearance.BorderColor = $T.Accent
+            $c.FlatAppearance.BorderSize = 1
+            $c.FlatAppearance.MouseOverBackColor = $T.Hover
+            $c.Font = $FontUI
+        } elseif ($c -is [System.Windows.Forms.TextBox]) {
+            $c.BackColor = $T.Bg
+            $c.ForeColor = $T.Text
+            $c.BorderStyle = 'FixedSingle'
+        } elseif ($c -is [System.Windows.Forms.ListView]) {
+            $c.BackColor = $T.Bg
+            $c.ForeColor = $T.Text
+            $c.BorderStyle = 'None'
+            $c.Font = $FontUI
+        } elseif ($c -is [System.Windows.Forms.Label]) {
+            $c.ForeColor = $T.Text
+            $c.Font = $FontUI
+        } elseif ($c -is [System.Windows.Forms.TabPage]) {
+            $c.BackColor = $T.Bg
+            $c.ForeColor = $T.Text
+            $c.Font = $FontUI
+        } elseif ($c -is [System.Windows.Forms.StatusStrip]) {
+            $c.BackColor = $T.Panel
+            $c.ForeColor = $T.Text
+            foreach ($item in $c.Items) { $item.ForeColor = $T.Text }
+        }
+        if ($c.Controls.Count -gt 0) { Apply-Theme $c }
+    }
+}
+
+function Style-Grid([System.Windows.Forms.DataGridView]$g) {
+    $g.EnableHeadersVisualStyles = $false
+    $g.BackgroundColor = $T.Bg
+    $g.BorderStyle = 'None'
+    $g.GridColor = $T.Panel
+    $g.RowHeadersVisible = $false
+    $g.Font = $FontUI
+    $g.ColumnHeadersDefaultCellStyle.BackColor = $T.Panel
+    $g.ColumnHeadersDefaultCellStyle.ForeColor = $T.Accent
+    $g.ColumnHeadersDefaultCellStyle.Font = New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
+    $g.ColumnHeadersDefaultCellStyle.SelectionBackColor = $T.Panel
+    $g.RowsDefaultCellStyle.BackColor = $T.Bg
+    $g.RowsDefaultCellStyle.ForeColor = $T.Text
+    $g.RowsDefaultCellStyle.SelectionBackColor = $T.Hover
+    $g.AlternatingRowsDefaultCellStyle.BackColor = $T.GridAlt
+    $g.AlternatingRowsDefaultCellStyle.ForeColor = $T.Text
+}
+
 $script:OutDir = Join-Path ([Environment]::GetFolderPath('Desktop')) 'inventario-pc'
 New-Item -ItemType Directory -Force -Path $script:OutDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $script:OutDir 'wifi') | Out-Null
@@ -61,6 +126,15 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text = 'InventarioPC - antes de formatar'
 $form.Size = New-Object System.Drawing.Size(920, 620)
 $form.StartPosition = 'CenterScreen'
+$form.BackColor = $T.Bg
+$form.ForeColor = $T.Text
+$form.Font = $FontUI
+
+$strip = New-Object System.Windows.Forms.Panel
+$strip.Dock = 'Top'
+$strip.Height = 5
+$strip.BackColor = $T.Accent
+$form.Controls.Add($strip)
 
 $tabs = New-Object System.Windows.Forms.TabControl
 $tabs.Dock = 'Fill'
@@ -260,5 +334,8 @@ $btnAbrir.Size = New-Object System.Drawing.Size(180, 36)
 $btnAbrir.Location = New-Object System.Drawing.Point(200, 400)
 $btnAbrir.Add_Click({ Invoke-Item $script:OutDir })
 $tabPos.Controls.Add($btnAbrir)
+
+Style-Grid $grid
+Apply-Theme $form
 
 [void]$form.ShowDialog()
