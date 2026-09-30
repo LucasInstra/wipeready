@@ -2,7 +2,9 @@
 
 App com interface gráfica para fazer o inventário do PC **antes de formatar**: hardware, chave do Windows, programas (com checklist do que manter), tamanho das pastas, backup de drivers e Wi-Fi, e kit de reinstalação via `winget`.
 
-## Uso (no PC que será formatado, como administrador)
+## Uso (no PC que será formatado)
+
+Duplo clique em `InventarioPC.exe` (pede admin sozinho) **ou**, se preferir o script:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File InventarioPC.ps1
