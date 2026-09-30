@@ -17,9 +17,15 @@ $bundlePath = Join-Path $dist 'WipeReady.bundle.ps1'
 # Explicit UTF-8 BOM: without it PowerShell reads non-ASCII chars as ANSI.
 [System.IO.File]::WriteAllText($bundlePath, $bundle, (New-Object System.Text.UTF8Encoding $true))
 
-Invoke-PS2EXE -InputFile $bundlePath `
-    -OutputFile (Join-Path $root 'WipeReady.exe') `
-    -noConsole -requireAdmin `
-    -title 'WipeReady' -description 'Pre-format PC inventory' -company 'WipeReady'
+$ErrorActionPreference = 'Stop'
+try {
+    Invoke-PS2EXE -InputFile $bundlePath `
+        -OutputFile (Join-Path $root 'WipeReady.exe') `
+        -noConsole -requireAdmin `
+        -title 'WipeReady' -description 'Pre-format PC inventory' -company 'WipeReady'
+} catch {
+    Write-Host ("BUILD FAILED: " + $_.Exception.Message)
+    exit 1
+}
 
 Write-Host 'Build done: WipeReady.exe'
