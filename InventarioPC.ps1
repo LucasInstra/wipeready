@@ -4,7 +4,7 @@
 
 #Requires -Version 5.1
 
-$script:Version = '1.1.0'
+$script:Version = '1.2.0'
 
 # --- eleva para admin sozinho ---
 $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -328,8 +328,9 @@ $tabs.TabPages.Add($tabPastas) | Out-Null
 $lstPastas = New-Object System.Windows.Forms.ListView
 $lstPastas.View = 'Details'
 $lstPastas.FullRowSelect = $true
+$lstPastas.CheckBoxes = $true
 $lstPastas.Dock = 'Top'
-$lstPastas.Height = 300
+$lstPastas.Height = 280
 $lstPastas.BackColor = $T.Bg
 $lstPastas.ForeColor = $T.Text
 $lstPastas.BorderStyle = 'None'
@@ -338,7 +339,18 @@ $lstPastas.Font = $FontUI
 [void]$lstPastas.Columns.Add('GB', 120)
 $tabPastas.Controls.Add($lstPastas)
 
-$btnEscanear = New-StyledButton 'Escanear pastas' 12 326
+function Update-BackupTotal {
+    $total = 0
+    foreach ($item in $lstPastas.CheckedItems) {
+        $v = 0
+        [void][double]::TryParse($item.SubItems[1].Text, [ref]$v)
+        $total += $v
+    }
+    $lblTotal.Text = "Selecionado para backup: $([math]::Round($total, 2)) GB"
+}
+$lstPastas.Add_ItemChecked({ Update-BackupTotal })
+
+$btnEscanear = New-StyledButton 'Escanear pastas' 12 296
 $btnEscanear.Add_Click({
     Set-Status 'Escaneando pastas... (pode demorar conforme o volume de arquivos)'
     $form.Refresh()
@@ -346,13 +358,56 @@ $btnEscanear.Add_Click({
     foreach ($f in (Get-UserFolderSizes)) {
         $item = New-Object System.Windows.Forms.ListViewItem($f.Pasta)
         [void]$item.SubItems.Add("$($f.GB)")
+        if ($f.Pasta -ne 'AppData') { $item.Checked = $true }
         $lstPastas.Items.Add($item) | Out-Null
     }
-    Set-Status 'Escaneamento concluido.'
+    Update-BackupTotal
+    Set-Status 'Escaneamento concluido. Desmarque o que nao for para o backup.'
 })
 $tabPastas.Controls.Add($btnEscanear)
 
-$tabPastas.Controls.Add((New-SectionLabel 'Copie para o HD externo: Desktop, Documentos, Imagens, Downloads, saves de jogos e a pasta inventario-pc.' 196 326 660))
+$btnCopiar = New-StyledButton 'Copiar p/ HD externo' 194 296 180
+$btnCopiar.Add_Click({
+    $sel = @($lstPastas.CheckedItems)
+    if ($sel.Count -eq 0) {
+        [System.Windows.Forms.MessageBox]::Show('Marque ao menos uma pasta.', 'InventarioPC')
+        return
+    }
+    $dlg = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dlg.Description = 'Escolha a pasta de destino no HD externo'
+    if ($dlg.ShowDialog() -ne 'OK') { return }
+    $i = 0
+    foreach ($item in $sel) {
+        $i++
+        $src = Join-Path $env:USERPROFILE $item.Text
+        $dst = Join-Path $dlg.SelectedPath $item.Text
+        Set-Status "Copiando $($item.Text) ($i de $($sel.Count))... nao feche o app."
+        $form.Refresh()
+        robocopy "$src" "$dst" /E /R:2 /W:2 /MT:8 /NFL /NDL /NJH /NJS | Out-Null
+        if ($LASTEXITCODE -ge 8) {
+            [System.Windows.Forms.MessageBox]::Show("Falha ao copiar $($item.Text).", 'InventarioPC')
+        }
+    }
+    Set-Status 'Backup das pastas concluido.'
+    [System.Windows.Forms.MessageBox]::Show('Backup das pastas concluido.', 'InventarioPC')
+})
+$tabPastas.Controls.Add($btnCopiar)
+
+$btnAbrirPasta = New-StyledButton 'Abrir pasta' 386 296 140
+$btnAbrirPasta.Add_Click({
+    if ($lstPastas.FocusedItem) { Invoke-Item (Join-Path $env:USERPROFILE $lstPastas.FocusedItem.Text) }
+})
+$tabPastas.Controls.Add($btnAbrirPasta)
+
+$lblTotal = New-Object System.Windows.Forms.Label
+$lblTotal.Text = 'Selecionado para backup: 0 GB'
+$lblTotal.AutoSize = $true
+$lblTotal.Location = New-Object System.Drawing.Point(14, 336)
+$lblTotal.ForeColor = $T.Accent
+$lblTotal.Font = New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
+$tabPastas.Controls.Add($lblTotal)
+
+$tabPastas.Controls.Add((New-SectionLabel 'Marque as pastas e copie para o HD externo. AppData vem desmarcado (programas reinstalam depois). Nao esqueca a pasta inventario-pc.' 14 360 850))
 
 # ================= Aba Pos-formatacao =================
 $tabPos = New-Object System.Windows.Forms.TabPage
