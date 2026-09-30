@@ -27,9 +27,9 @@ function Add-RestoreTab {
     $steps.BackColor = $T.Panel
     $steps.ColumnCount = 2
     $steps.RowCount = 4
-    $steps.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
+    [void]$steps.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
         [System.Windows.Forms.SizeType]::Absolute, 30)))
-    $steps.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
+    [void]$steps.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
         [System.Windows.Forms.SizeType]::Percent, 100)))
     $stepTexts = @(
         'Install Windows from the ISO.',
@@ -38,7 +38,7 @@ function Add-RestoreTab {
         'Check the saved drivers and Wi-Fi.'
     )
     for ($i = 0; $i -lt 4; $i++) {
-        $steps.RowStyles.Add((New-Object System.Windows.Forms.RowStyle(
+        [void]$steps.RowStyles.Add((New-Object System.Windows.Forms.RowStyle(
             [System.Windows.Forms.SizeType]::Absolute, 26)))
         $n = New-Object System.Windows.Forms.Label
         $n.Text = "$($i + 1)."
@@ -80,7 +80,7 @@ function Add-RestoreTab {
     $btnWinget.Add_Click({
         try {
             Set-Status 'Exporting winget list...' -Kind Busy
-            winget export -o (Join-Path $script:OutDir 'reinstall.json') --include-versions
+            winget export -o (Join-Path $script:OutDir 'reinstall.json') --include-versions | Out-Null
             Set-Status 'reinstall.json created. After formatting: winget import -i reinstall.json' -Kind Success
         } catch {
             Set-Status 'Winget export failed.' -Kind Error

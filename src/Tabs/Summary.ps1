@@ -27,12 +27,12 @@ function Add-SummaryTab {
     $grid2.BackColor = $T.Panel
     $grid2.ColumnCount = 2
     $grid2.RowCount = 7
-    $grid2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
+    [void]$grid2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
         [System.Windows.Forms.SizeType]::Absolute, 150)))
-    $grid2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
+    [void]$grid2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
         [System.Windows.Forms.SizeType]::Percent, 100)))
     for ($i = 0; $i -lt 7; $i++) {
-        $grid2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle(
+        [void]$grid2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle(
             [System.Windows.Forms.SizeType]::Absolute, 24)))
     }
     $cardInfo.Controls.Add($grid2)

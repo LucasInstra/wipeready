@@ -75,7 +75,7 @@ function Add-ProgramsTab {
         $row['Program'] = $p.DisplayName
         $row['Version'] = $p.DisplayVersion
         $row['Publisher'] = $p.Publisher
-        $script:ProgramsTable.Rows.Add($row)
+        $script:ProgramsTable.Rows.Add($row) | Out-Null
     }
     $grid.DataSource = $script:ProgramsTable
     $grid.Columns['Keep'].ReadOnly = $false
@@ -89,7 +89,7 @@ function Add-ProgramsTab {
     $grid.Columns['Publisher'].FillWeight = 15
 
     $grid.Add_CurrentCellDirtyStateChanged({
-        if ($grid.IsCurrentCellDirty) { $grid.CommitEdit('Commit') }
+        if ($grid.IsCurrentCellDirty) { [void]$grid.CommitEdit('Commit') }
     })
     $grid.Add_CellValueChanged({ Update-ProgramsCount })
     Update-ProgramsCount
