@@ -1,7 +1,7 @@
 ---
 description: Analyzes the WipeReady codebase (structure, UI logic, risks) without modifying files
 mode: subagent
-model: opencode/gpt-6-luna
+model: opencode-go/gpt-6-luna
 permissions:
   - action: edit
     resource: "*"
