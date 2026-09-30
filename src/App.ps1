@@ -1,10 +1,10 @@
-﻿# WipeReady v2.2.0 - pre-format PC inventory with GUI
+﻿# WipeReady v2.2.1 - pre-format PC inventory with GUI
 # Usage (on the PC to be formatted): double-click WipeReady.exe
 # or: powershell -ExecutionPolicy Bypass -File App.ps1 (as admin)
 
 #Requires -Version 5.1
 
-$script:Version = '2.2.0'
+$script:Version = '2.2.1'
 
 # --- self-elevate ---
 $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)

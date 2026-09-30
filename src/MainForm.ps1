@@ -174,6 +174,12 @@ function New-AppShell {
         }
     })
     $script:grip.Add_MouseUp({ $script:resizing = $false })
+
+    $script:form.Add_FormClosed({
+        foreach ($f in @($FontUI, $FontTitle, $FontSection, $FontMono, $FontBoldUI)) {
+            if ($f) { $f.Dispose() }
+        }
+    })
 }
 
 function New-TitleButton([string]$kind) {

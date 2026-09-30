@@ -1,6 +1,8 @@
 # Changelog
 
-## 2.2.0
+## 2.2.1
+
+- Fonts disposed on close (no-op fixup release)
 
 - Browser profile backup (Chrome, Edge, Firefox)
 - Generated setup.ps1: one-shot restore (winget + Wi-Fi + drivers)
