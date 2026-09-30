@@ -1,41 +1,29 @@
 # WipeReady "Backup" tab: pick user folders and copy them to an external drive
+# Same scan, same robocopy arguments, same outputs. Only layout changed.
 
 function Add-BackupTab {
     $tab = New-Object System.Windows.Forms.TabPage
     $tab.Text = 'Backup'
     $tab.BackColor = $T.Bg
     $tab.Padding = New-Object System.Windows.Forms.Padding(12)
+    $tab.AutoScroll = $true
     $script:tabs.TabPages.Add($tab) | Out-Null
 
-    $lst = New-Object System.Windows.Forms.ListView
-    $lst.View = 'Details'
-    $lst.FullRowSelect = $true
-    $lst.CheckBoxes = $true
-    $lst.Dock = 'Top'
-    $lst.Height = 280
-    $lst.BackColor = $T.Bg
-    $lst.ForeColor = $T.Text
-    $lst.BorderStyle = 'None'
-    $lst.Font = $FontUI
-    [void]$lst.Columns.Add('Folder', 320)
-    [void]$lst.Columns.Add('GB', 120)
-    $tab.Controls.Add($lst)
-    $script:FolderList = $lst
+    $tab.Controls.Add((New-SectionHeader 'Folders and backup' 'Scan, check what matters, copy to the external drive. AppData starts unchecked.'))
 
-    $lblTotal = New-Object System.Windows.Forms.Label
-    $lblTotal.Text = 'Selected for backup: 0 GB'
-    $lblTotal.AutoSize = $true
-    $lblTotal.Location = New-Object System.Drawing.Point(14, 336)
-    $lblTotal.ForeColor = $T.Accent
-    $lblTotal.Font = New-Object System.Drawing.Font('Segoe UI', 9, [System.Drawing.FontStyle]::Bold)
-    $tab.Controls.Add($lblTotal)
-    $script:BackupTotalLabel = $lblTotal
+    # ---- Toolbar ----
+    $bar = New-Object System.Windows.Forms.FlowLayoutPanel
+    $bar.Location = New-Object System.Drawing.Point(12, 74)
+    $bar.Size = New-Object System.Drawing.Size(880, 44)
+    $bar.Anchor = 'Top, Left, Right'
+    $bar.BackColor = $T.Bg
+    $bar.FlowDirection = 'LeftToRight'
+    $bar.WrapContents = $true
+    $tab.Controls.Add($bar)
 
-    $lst.Add_ItemChecked({ Update-BackupTotal })
-
-    $btnScan = New-StyledButton 'Scan folders' 12 296
+    $btnScan = New-StyledButton 'Scan folders'
     $btnScan.Add_Click({
-        Set-Status 'Scanning folders... (may take a while depending on file volume)'
+        Set-Status 'Scanning folders... (may take a while depending on file volume)' -Kind Busy
         $script:form.Refresh()
         $script:FolderList.Items.Clear()
         foreach ($f in (Get-UserFolderSizes)) {
@@ -44,12 +32,14 @@ function Add-BackupTab {
             if ($f.Folder -ne 'AppData') { $item.Checked = $true }
             $script:FolderList.Items.Add($item) | Out-Null
         }
+        $script:BackupEmptyHint.Visible = $false
         Update-BackupTotal
-        Set-Status 'Scan complete. Uncheck anything that should not go to backup.'
+        Set-Status 'Scan complete. Uncheck anything that should not go to backup.' -Kind Success
     })
-    $tab.Controls.Add($btnScan)
+    $bar.Controls.Add($btnScan)
+    Add-Tip $btnScan 'Measures each user folder (Desktop, Documents, ...)'
 
-    $btnCopy = New-StyledButton 'Copy to external drive' 194 296 200
+    $btnCopy = New-StyledButton 'Copy to external drive' 200 -Primary
     $btnCopy.Add_Click({
         $sel = @($script:FolderList.CheckedItems)
         if ($sel.Count -eq 0) {
@@ -64,27 +54,76 @@ function Add-BackupTab {
             $i++
             $src = Join-Path $env:USERPROFILE $item.Text
             $dst = Join-Path $dlg.SelectedPath $item.Text
-            Set-Status "Copying $($item.Text) ($i of $($sel.Count))... keep the app open."
+            Set-Status "Copying $($item.Text) ($i of $($sel.Count))... keep the app open." -Kind Busy
             $script:form.Refresh()
             robocopy "$src" "$dst" /E /R:2 /W:2 /MT:8 /NFL /NDL /NJH /NJS | Out-Null
             if ($LASTEXITCODE -ge 8) {
                 [System.Windows.Forms.MessageBox]::Show("Failed to copy $($item.Text).", 'WipeReady')
             }
         }
-        Set-Status 'Folder backup complete.'
+        Set-Status 'Folder backup complete.' -Kind Success
         [System.Windows.Forms.MessageBox]::Show('Folder backup complete.', 'WipeReady')
     })
-    $tab.Controls.Add($btnCopy)
+    $bar.Controls.Add($btnCopy)
+    Add-Tip $btnCopy 'Copies checked folders to the drive you pick'
 
-    $btnOpen = New-StyledButton 'Open folder' 406 296 140
+    $btnOpen = New-StyledButton 'Open folder' 140
     $btnOpen.Add_Click({
         if ($script:FolderList.FocusedItem) {
             Invoke-Item (Join-Path $env:USERPROFILE $script:FolderList.FocusedItem.Text)
         }
     })
-    $tab.Controls.Add($btnOpen)
+    $bar.Controls.Add($btnOpen)
 
-    $tab.Controls.Add((New-SectionLabel 'Check the folders and copy them to the external drive. AppData starts unchecked (programs get reinstalled later). Do not forget the wipeready folder.' 14 360 850))
+    # ---- Folder list (same columns, checkboxes and behavior) ----
+    $lst = New-Object System.Windows.Forms.ListView
+    $lst.View = 'Details'
+    $lst.FullRowSelect = $true
+    $lst.CheckBoxes = $true
+    $lst.Location = New-Object System.Drawing.Point(12, 124)
+    $lst.Size = New-Object System.Drawing.Size(880, 216)
+    $lst.Anchor = 'Top, Bottom, Left, Right'
+    $lst.BackColor = $T.Bg
+    $lst.ForeColor = $T.Text
+    $lst.BorderStyle = 'FixedSingle'
+    $lst.Font = $FontUI
+    [void]$lst.Columns.Add('Folder', 320)
+    [void]$lst.Columns.Add('GB', 120)
+    $tab.Controls.Add($lst)
+    $script:FolderList = $lst
+
+    $lst.Add_ItemChecked({ Update-BackupTotal })
+
+    # ---- Bottom: highlighted total + empty-state hint + guide note ----
+    $lblTotal = New-Object System.Windows.Forms.Label
+    $lblTotal.Text = 'Selected for backup: 0 GB'
+    $lblTotal.AutoSize = $true
+    $lblTotal.Location = New-Object System.Drawing.Point(12, 346)
+    $lblTotal.Anchor = 'Bottom, Left'
+    $lblTotal.ForeColor = $T.Accent
+    $lblTotal.Font = New-Object System.Drawing.Font('Segoe UI', 10, [System.Drawing.FontStyle]::Bold)
+    $tab.Controls.Add($lblTotal)
+    $script:BackupTotalLabel = $lblTotal
+
+    $lblEmpty = New-Object System.Windows.Forms.Label
+    $lblEmpty.Text = 'No folders scanned yet — click Scan folders.'
+    $lblEmpty.AutoSize = $true
+    $lblEmpty.Location = New-Object System.Drawing.Point(12, 372)
+    $lblEmpty.Anchor = 'Bottom, Left'
+    $lblEmpty.ForeColor = $T.Warn
+    $lblEmpty.Font = $FontUI
+    $tab.Controls.Add($lblEmpty)
+    $script:BackupEmptyHint = $lblEmpty
+
+    $lblGuide = New-Object System.Windows.Forms.Label
+    $lblGuide.Text = 'AppData starts unchecked (programs get reinstalled later). Do not forget the wipeready folder.'
+    $lblGuide.AutoSize = $false
+    $lblGuide.Size = New-Object System.Drawing.Size(880, 20)
+    $lblGuide.Location = New-Object System.Drawing.Point(12, 394)
+    $lblGuide.Anchor = 'Bottom, Left, Right'
+    $lblGuide.ForeColor = $T.Muted
+    $lblGuide.Font = $FontUI
+    $tab.Controls.Add($lblGuide)
 }
 
 function Update-BackupTotal {
