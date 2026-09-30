@@ -59,6 +59,13 @@ function Add-ProgramsTab {
         } else {
             $script:ProgramsTable.DefaultView.RowFilter = "Program LIKE '%$q%'"
         }
+        $g = $script:ProgramsGrid
+        if ($g -and $g.Rows.Count -gt 0) {
+            try {
+                $g.CurrentCell = $g.Rows[0].Cells['Keep']
+                $g.FirstDisplayedScrollingRowIndex = 0
+            } catch { }
+        }
     })
 
     # ---- Grid (same binding and columns as before) ----
@@ -214,17 +221,21 @@ function Add-ProgramsTab {
         if ($sender.IsCurrentCellDirty) { [void]$sender.CommitEdit('Commit') }
     })
     $grid.Add_CellValueChanged({ Update-ProgramsCount })
-    # Safety net: whatever moves the current row (mouse, default keys,
-    # our KeyDown), keep it visible so the list always scrolls along.
-    $grid.Add_SelectionChanged({
+    # Scrolling with the mouse or scrollbar does not change CurrentCell.
+    # Keep selection aligned with the visible rows so the next key press
+    # cannot jump back to a row that has scrolled out of view.
+    $grid.Add_Scroll({
         param($sender, $e)
         try {
-            if ($sender.CurrentCell) { Set-ProgramsVisibleRow $sender $sender.CurrentCell.RowIndex }
+            $current = $sender.CurrentCell
+            $first = $sender.FirstDisplayedScrollingRowIndex
+            $displayed = $sender.DisplayedRowCount($false)
+            if ($current -and $displayed -gt 0 -and
+                ($current.RowIndex -lt $first -or $current.RowIndex -ge ($first + $displayed)) -and
+                $sender.Columns.Contains('Keep')) {
+                $sender.CurrentCell = $sender.Rows[$first].Cells['Keep']
+            }
         } catch { }
-    })
-    $grid.Add_RowEnter({
-        param($sender, $e)
-        try { Set-ProgramsVisibleRow $sender $e.RowIndex } catch { }
     })
     Update-ProgramsCount
     try {
