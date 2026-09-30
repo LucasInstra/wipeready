@@ -1,6 +1,8 @@
 # Changelog
 
-## 2.1.0
+## 2.1.1
+
+- Title-bar icons are drawn (no font glyphs): minimize, maximize/restore, close
 
 - Borderless window with custom title bar (drag, minimize, maximize, close, resize grip)
 - Custom dark navigation (no white TabControl chrome), per-monitor DPI

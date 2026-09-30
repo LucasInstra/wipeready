@@ -40,9 +40,9 @@ function New-AppShell {
     $lblVer.Location = New-Object System.Drawing.Point(92, 10)
     $script:titleBar.Controls.Add($lblVer)
 
-    $script:btnMin = New-TitleButton '—'
-    $script:btnMax = New-TitleButton '▢'
-    $script:btnClose = New-TitleButton 'X'
+    $script:btnMin = New-TitleButton 'min'
+    $script:btnMax = New-TitleButton 'max'
+    $script:btnClose = New-TitleButton 'close'
     $script:btnClose.FlatAppearance.MouseOverBackColor = [System.Drawing.ColorTranslator]::FromHtml('#e81123')
     $script:titleBar.Controls.Add($script:btnMin)
     $script:titleBar.Controls.Add($script:btnMax)
@@ -189,18 +189,46 @@ function New-AppShell {
     $script:grip.Add_MouseUp({ $script:resizing = $false })
 }
 
-function New-TitleButton([string]$text) {
+function New-TitleButton([string]$kind) {
     $b = New-Object System.Windows.Forms.Button
-    $b.Text = $text
+    $b.Text = ''
+    $b.Tag = $kind
     $b.Size = New-Object System.Drawing.Size(48, 36)
     $b.FlatStyle = 'Flat'
     $b.UseVisualStyleBackColor = $false
     $b.BackColor = $T.Panel
     $b.ForeColor = $T.Text
-    $b.Font = New-Object System.Drawing.Font('Segoe UI', 10)
     $b.FlatAppearance.BorderSize = 0
     $b.FlatAppearance.MouseOverBackColor = $T.Hover
     $b.Cursor = [System.Windows.Forms.Cursors]::Hand
+    $b.Add_Paint({
+        param($sender, $e)
+        $g = $e.Graphics
+        $g.SmoothingMode = 'AntiAlias'
+        $pen = New-Object System.Drawing.Pen($sender.ForeColor, 2)
+        $cx = $sender.ClientSize.Width / 2
+        $cy = $sender.ClientSize.Height / 2
+        switch ($sender.Tag) {
+            'min' {
+                $g.DrawLine($pen, ($cx - 5), $cy, ($cx + 5), $cy)
+            }
+            'max' {
+                $g.DrawRectangle($pen, ($cx - 5), ($cy - 5), 10, 10)
+            }
+            'restore' {
+                $bg = New-Object System.Drawing.SolidBrush($sender.BackColor)
+                $g.DrawRectangle($pen, ($cx - 2), ($cy - 7), 9, 9)
+                $g.FillRectangle($bg, ($cx - 6), ($cy - 1), 9, 9)
+                $g.DrawRectangle($pen, ($cx - 6), ($cy - 1), 9, 9)
+                $bg.Dispose()
+            }
+            'close' {
+                $g.DrawLine($pen, ($cx - 5), ($cy - 5), ($cx + 5), ($cy + 5))
+                $g.DrawLine($pen, ($cx + 5), ($cy - 5), ($cx - 5), ($cy + 5))
+            }
+        }
+        $pen.Dispose()
+    })
     return $b
 }
 
@@ -218,15 +246,16 @@ function Toggle-Maximize {
     if ($script:form.WindowState -eq 'Maximized') {
         $script:form.WindowState = 'Normal'
         $script:form.MaximumSize = New-Object System.Drawing.Size(0, 0)
-        $script:btnMax.Text = '▢'
+        $script:btnMax.Tag = 'max'
     } else {
         # Cap at the working area so maximized never covers the taskbar.
         # (MaximizedBounds is missing on some runtimes; MaximumSize works.)
         $wa = [System.Windows.Forms.Screen]::FromControl($script:form).WorkingArea.Size
         $script:form.MaximumSize = New-Object System.Drawing.Size($wa.Width, $wa.Height)
         $script:form.WindowState = 'Maximized'
-        $script:btnMax.Text = '❐'
+        $script:btnMax.Tag = 'restore'
     }
+    $script:btnMax.Invalidate()
 }
 
 function Register-Page([string]$title, $panel) {
