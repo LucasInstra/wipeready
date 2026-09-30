@@ -83,9 +83,9 @@ function New-AppShell {
 }
 
 function Register-Page([string]$title, $panel) {
+    # NOTE: $panel was already parented by its builder (binding requirement).
     $panel.Dock = 'Fill'
     $panel.Visible = $false
-    $script:PagesPanel.Controls.Add($panel)
     $script:PagePanels += $panel
     $idx = $script:PagePanels.Count - 1
 

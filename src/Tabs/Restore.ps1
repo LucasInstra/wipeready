@@ -6,6 +6,9 @@ function Add-RestoreTab {
     $tab.BackColor = $T.Bg
     $tab.Padding = New-Object System.Windows.Forms.Padding(12)
     $tab.AutoScroll = $true
+    # Parent now (not in Register-Page): keeps binding mechanics identical
+    # across tabs (see Programs).
+    $script:PagesPanel.Controls.Add($tab)
 
     $tab.Controls.Add((New-SectionHeader 'After formatting' 'Reinstall in order. Everything the app saved lives in Desktop\wipeready.'))
 

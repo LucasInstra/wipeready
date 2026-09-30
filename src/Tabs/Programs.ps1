@@ -6,6 +6,9 @@ function Add-ProgramsTab {
     $tab.BackColor = $T.Bg
     $tab.Padding = New-Object System.Windows.Forms.Padding(12)
     $tab.AutoScroll = $true
+    # Parent now (not in Register-Page): the grid's data binding needs
+    # the form chain to exist before DataSource is set below.
+    $script:PagesPanel.Controls.Add($tab)
 
     $tab.Controls.Add((New-SectionHeader 'Installed programs' 'Check what to keep. Save writes selection.json and selection.csv.'))
 
