@@ -7,11 +7,21 @@ function Get-HardwareSummary {
     $gpu = (Get-CimInstance Win32_VideoController | Select-Object -First 1).Name
     $key = (Get-CimInstance SoftwareLicensingService).OA3xOriginalProductKey
     if (-not $key) { $key = '(not stored in firmware)' }
+    $diskHealth = 'Unknown'
+    try {
+        $pred = Get-CimInstance -Namespace root/wmi -Class MSStorageDriver_FailurePredictStatus -ErrorAction Stop
+        if (@($pred | Where-Object { $_.PredictFailure }).Count -gt 0) {
+            $diskHealth = 'FAIL - replace the drive before trusting backups to it'
+        } else {
+            $diskHealth = 'OK'
+        }
+    } catch { }
     return [ordered]@{
         'Machine'    = "$($cs.Manufacturer) $($cs.Model)"
         'CPU'        = $cpu.Name
         'RAM (GB)'   = [math]::Round($cs.TotalPhysicalMemory / 1GB)
         'GPU'        = $gpu
+        'DiskHealth' = $diskHealth
         'OS'         = "$($os.Caption) ($($os.Version))"
         'Installed'  = $os.InstallDate
         'ProductKey' = $key

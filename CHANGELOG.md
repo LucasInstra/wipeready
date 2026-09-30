@@ -1,6 +1,13 @@
 # Changelog
 
-## 2.1.3
+## 2.2.0
+
+- Browser profile backup (Chrome, Edge, Firefox)
+- Generated setup.ps1: one-shot restore (winget + Wi-Fi + drivers)
+- One-click saved-driver install; pre-format readiness check
+- Post-format checklist (persisted); export everything to a single .zip
+- Disk health (SMART) in Summary; per-user (HKCU) programs
+- Inventory diff against another selection.csv
 
 - Removed the subtitle header; pages gained the space
 

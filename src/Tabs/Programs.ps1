@@ -132,6 +132,11 @@ function Add-ProgramsTab {
     $row.Controls.Add($btnSave)
     Add-Tip $btnSave 'Writes selection.json and selection.csv to Desktop\wipeready'
 
+    $btnDiff = New-StyledButton 'Compare...' 140
+    $btnDiff.Add_Click({ Compare-Inventories })
+    $row.Controls.Add($btnDiff)
+    Add-Tip $btnDiff 'Diff current programs against a selection.csv from another inventory'
+
     $note = New-OutputNote ''
     $note.Location = New-Object System.Drawing.Point(12, 398)
     $note.Anchor = 'Bottom, Left, Right'
@@ -148,4 +153,46 @@ function Update-ProgramsCount {
         $text += " (" + $script:ProgramsTable.DefaultView.Count + " shown)"
     }
     $script:ProgramsCountLabel.Text = $text
+}
+
+# Diffs installed programs against another inventory's selection.csv.
+function Compare-Inventories {
+    try {
+        $dlg = New-Object System.Windows.Forms.OpenFileDialog
+        $dlg.Title = 'Pick a selection.csv from another inventory'
+        $dlg.Filter = 'CSV files (*.csv)|*.csv'
+        if ($dlg.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
+        $other = @(Import-Csv $dlg.FileName | ForEach-Object { $_.Program })
+        $current = @($script:ProgramsTable.Rows | ForEach-Object { $_['Program'] })
+        $added = @($current | Where-Object { $other -notcontains $_ } | Sort-Object)
+        $removed = @($other | Where-Object { $current -notcontains $_ } | Sort-Object)
+        $out = @()
+        $out += "Only here ($($added.Count)):"
+        $out += $added
+        $out += ''
+        $out += "Only there ($($removed.Count)):"
+        $out += $removed
+        $f = New-Object System.Windows.Forms.Form
+        $f.Text = 'Inventory diff'
+        $f.Size = New-Object System.Drawing.Size(520, 420)
+        $f.StartPosition = 'CenterParent'
+        $f.BackColor = $T.Bg
+        $f.ForeColor = $T.Text
+        $f.Font = $FontUI
+        $t = New-Object System.Windows.Forms.TextBox
+        $t.Multiline = $true
+        $t.ReadOnly = $true
+        $t.ScrollBars = 'Both'
+        $t.Font = $FontMono
+        $t.BackColor = $T.Bg
+        $t.ForeColor = $T.Text
+        $t.Dock = 'Fill'
+        $t.Lines = $out
+        $f.Controls.Add($t)
+        [void]$f.ShowDialog($script:form)
+        Set-Status 'Inventories compared.' -Kind Success
+    } catch {
+        Set-Status 'Compare failed.' -Kind Error
+        [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'WipeReady')
+    }
 }

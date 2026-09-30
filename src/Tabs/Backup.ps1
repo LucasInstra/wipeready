@@ -90,6 +90,11 @@ function Add-BackupTab {
     })
     $bar.Controls.Add($btnOpen)
 
+    $btnBrowsers = New-StyledButton 'Backup browsers' 170
+    $btnBrowsers.Add_Click({ Backup-BrowserProfiles })
+    $bar.Controls.Add($btnBrowsers)
+    Add-Tip $btnBrowsers 'Copies Chrome, Edge and Firefox profiles (bookmarks, passwords, extensions)'
+
     # ---- Folder list (same columns, checkboxes and behavior) ----
     $lst = New-Object System.Windows.Forms.ListView
     $lst.View = 'Details'
@@ -148,4 +153,42 @@ function Update-BackupTotal {
         if ($item.Tag -is [double]) { $total += $item.Tag }
     }
     $script:BackupTotalLabel.Text = "Selected for backup: $([math]::Round($total, 2)) GB"
+}
+
+# Copies Chrome/Edge/Firefox profiles (bookmarks, saved passwords,
+# extensions). Skips caches. Close the browsers first: locked files
+# are skipped. Passwords only restore on the same Windows account.
+function Backup-BrowserProfiles {
+    try {
+        Set-Status 'Backing up browser profiles...' -Kind Busy
+        $dest = Join-Path $script:OutDir 'browsers'
+        $found = 0
+        $chromium = @(
+            @{ Name = 'Chrome'; Path = (Join-Path $env:LOCALAPPDATA 'Google\Chrome\User Data\Default') },
+            @{ Name = 'Edge'; Path = (Join-Path $env:LOCALAPPDATA 'Microsoft\Edge\User Data\Default') }
+        )
+        foreach ($b in $chromium) {
+            if (Test-Path $b.Path) {
+                $found++
+                robocopy $b.Path (Join-Path $dest $b.Name) /E /R:2 /W:2 /MT:8 /NFL /NDL /NJH /NJS `
+                    /XD 'Cache' 'Code Cache' 'GPUCache' 'ShaderCache' 'Service Worker Cache' | Out-Null
+            }
+        }
+        $ffRoot = Join-Path $env:APPDATA 'Mozilla\Firefox\Profiles'
+        if (Test-Path $ffRoot) {
+            foreach ($prof in (Get-ChildItem $ffRoot -Directory -Filter '*.default*')) {
+                $found++
+                robocopy $prof.FullName (Join-Path $dest ('Firefox-' + $prof.Name)) /E /R:2 /W:2 /MT:8 /NFL /NDL /NJH /NJS `
+                    /XD 'cache2' 'startupCache' | Out-Null
+            }
+        }
+        if ($found -eq 0) {
+            Set-Status 'No browser profiles found.' -Kind Warn
+        } else {
+            Set-Status "Browser profiles saved to wipeready\browsers ($found). Close browsers first for a complete copy." -Kind Success
+        }
+    } catch {
+        Set-Status 'Browser backup failed.' -Kind Error
+        [void][System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'WipeReady')
+    }
 }

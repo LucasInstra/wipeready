@@ -15,30 +15,33 @@ function Add-SummaryTab {
     # ---- This PC card (same Get-HardwareSummary data, key/value grid) ----
     $cardInfo = New-Card
     $cardInfo.Location = New-Object System.Drawing.Point(12, 74)
-    $cardInfo.Size = New-Object System.Drawing.Size(880, 230)
+    $cardInfo.Size = New-Object System.Drawing.Size(880, 254)
     $cardInfo.Anchor = 'Top, Left, Right'
     $tab.Controls.Add($cardInfo)
+
+    $hw = Get-HardwareSummary
+    $infoH = 56 + ($hw.Count * 24)
+    $cardInfo.Size = New-Object System.Drawing.Size(880, $infoH)
 
     $cardInfo.Controls.Add((New-CardTitle 'This PC'))
 
     $grid2 = New-Object System.Windows.Forms.TableLayoutPanel
     $grid2.Location = New-Object System.Drawing.Point(14, 48)
-    $grid2.Size = New-Object System.Drawing.Size(852, 168)
+    $grid2.Size = New-Object System.Drawing.Size(852, ($hw.Count * 24))
     $grid2.Anchor = 'Top, Left, Right'
     $grid2.BackColor = $T.Panel
     $grid2.ColumnCount = 2
-    $grid2.RowCount = 7
+    $grid2.RowCount = $hw.Count
     [void]$grid2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
         [System.Windows.Forms.SizeType]::Absolute, 150)))
     [void]$grid2.ColumnStyles.Add((New-Object System.Windows.Forms.ColumnStyle(
         [System.Windows.Forms.SizeType]::Percent, 100)))
-    for ($i = 0; $i -lt 7; $i++) {
+    for ($i = 0; $i -lt $hw.Count; $i++) {
         [void]$grid2.RowStyles.Add((New-Object System.Windows.Forms.RowStyle(
             [System.Windows.Forms.SizeType]::Absolute, 24)))
     }
     $cardInfo.Controls.Add($grid2)
 
-    $hw = Get-HardwareSummary
     $r = 0
     foreach ($kv in $hw.GetEnumerator()) {
         $k = New-Object System.Windows.Forms.Label
@@ -61,7 +64,7 @@ function Add-SummaryTab {
 
     # ---- Exports card (same three actions, same outputs) ----
     $cardExp = New-Card
-    $cardExp.Location = New-Object System.Drawing.Point(12, 312)
+    $cardExp.Location = New-Object System.Drawing.Point(12, (74 + $infoH + 8))
     $cardExp.Size = New-Object System.Drawing.Size(880, 128)
     $cardExp.Anchor = 'Top, Left, Right'
     $tab.Controls.Add($cardExp)
