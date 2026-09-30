@@ -1,4 +1,4 @@
-# WipeReady main window shell (header, owner-drawn tabs, status bar)
+﻿# WipeReady main window shell (header, owner-drawn tabs, status bar)
 # Layout only. No data collection and no export logic here.
 
 function New-AppShell {
@@ -42,15 +42,17 @@ function New-AppShell {
     $strip.BackColor = $T.Accent
     $script:form.Controls.Add($strip)
 
-    $script:tabs = New-Object System.Windows.Forms.TabControl
+    $script:tabs = New-Object BorderlessTabControl
     $script:tabs.Location = New-Object System.Drawing.Point(10, 74)
     $script:tabs.Size = New-Object System.Drawing.Size(904, 482)
     $script:tabs.Anchor = 'Top, Bottom, Left, Right'
+    $script:tabs.BackColor = $T.Bg
     $script:tabs.DrawMode = 'OwnerDrawFixed'
     $script:tabs.SizeMode = 'Fixed'
     $script:tabs.ItemSize = New-Object System.Drawing.Size(170, 34)
     $script:tabs.Font = $FontUI
     $script:form.Controls.Add($script:tabs)
+    $script:tabs.Add_Resize({ Update-TabWidths })
 
     $script:tabs.Add_DrawItem({
         param($s, $e)
@@ -96,5 +98,16 @@ function Set-Status([string]$msg, [string]$Kind = 'Normal') {
 }
 
 function Show-App {
+    [void]$script:form.Handle
+    Set-DarkTitleBar $script:form
+    Update-TabWidths
     [void]$script:form.ShowDialog()
+}
+
+# Tabs always fill the full row width (no unpainted strip on the right).
+function Update-TabWidths {
+    if ($script:tabs.TabPages.Count -eq 0) { return }
+    $w = [math]::Floor($script:tabs.ClientSize.Width / $script:tabs.TabPages.Count)
+    if ($w -lt 80) { $w = 80 }
+    $script:tabs.ItemSize = New-Object System.Drawing.Size($w, 34)
 }

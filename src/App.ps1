@@ -1,4 +1,4 @@
-# WipeReady v2.0.0 - pre-format PC inventory with GUI
+﻿# WipeReady v2.0.0 - pre-format PC inventory with GUI
 # Usage (on the PC to be formatted): double-click WipeReady.exe
 # or: powershell -ExecutionPolicy Bypass -File App.ps1 (as admin)
 

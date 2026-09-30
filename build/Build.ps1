@@ -14,7 +14,8 @@ $bundle = [regex]::Replace($entry, '(?m)^\s*\.\s*"\$PSScriptRoot/([^"]+)"\s*$', 
 $dist = Join-Path $root 'dist'
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 $bundlePath = Join-Path $dist 'WipeReady.bundle.ps1'
-$bundle | Out-File $bundlePath -Encoding UTF8
+# Explicit UTF-8 BOM: without it PowerShell reads non-ASCII chars as ANSI.
+[System.IO.File]::WriteAllText($bundlePath, $bundle, (New-Object System.Text.UTF8Encoding $true))
 
 Invoke-PS2EXE -InputFile $bundlePath `
     -OutputFile (Join-Path $root 'WipeReady.exe') `

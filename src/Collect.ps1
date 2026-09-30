@@ -1,4 +1,4 @@
-# WipeReady data collection (read-only, never modifies the system)
+﻿# WipeReady data collection (read-only, never modifies the system)
 
 function Get-HardwareSummary {
     $cs  = Get-CimInstance Win32_ComputerSystem

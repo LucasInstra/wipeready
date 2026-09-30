@@ -1,4 +1,4 @@
-# WipeReady "Summary" tab: machine info cards + export actions
+﻿# WipeReady "Summary" tab: machine info cards + export actions
 # Same data (Get-HardwareSummary) and same handlers/outputs as before.
 
 function Add-SummaryTab {

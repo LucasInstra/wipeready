@@ -1,4 +1,4 @@
-# WipeReady "Programs" tab: searchable checklist of installed programs
+﻿# WipeReady "Programs" tab: searchable checklist of installed programs
 # Same data source, same selection.json/selection.csv outputs.
 
 function Add-ProgramsTab {

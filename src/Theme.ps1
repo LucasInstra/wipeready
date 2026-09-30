@@ -1,5 +1,32 @@
-# WipeReady theme (dark) + shared UI helpers
+﻿# WipeReady theme (dark) + shared UI helpers
 # Presentation only: colors, fonts, control factories. No data collection here.
+
+Add-Type -ReferencedAssemblies @('System.Windows.Forms') -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+public static class Dwm {
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int val, int size);
+}
+public class BorderlessTabControl : TabControl {
+    private const int TCM_ADJUSTRECT = 0x1328;
+    protected override void WndProc(ref Message m) {
+        if (m.Msg == TCM_ADJUSTRECT) { m.Result = (IntPtr)1; return; }
+        base.WndProc(ref m);
+    }
+}
+'@
+
+# Dark caption bar (Win11, falls back to Win10). The min/max/close
+# buttons stay native: WinForms cannot recolor them per-app.
+function Set-DarkTitleBar($form) {
+    try {
+        $val = 1
+        $r = [Dwm]::DwmSetWindowAttribute($form.Handle, 20, [ref]$val, 4)
+        if ($r -ne 0) { [void][Dwm]::DwmSetWindowAttribute($form.Handle, 19, [ref]$val, 4) }
+    } catch { }
+}
 
 $T = @{
     Bg        = [System.Drawing.ColorTranslator]::FromHtml('#0f172a')

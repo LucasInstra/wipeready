@@ -1,4 +1,4 @@
-# WipeReady "Restore" tab: after-format steps + winget export
+﻿# WipeReady "Restore" tab: after-format steps + winget export
 # Same step texts, same command, same reinstall.json output.
 
 function Add-RestoreTab {

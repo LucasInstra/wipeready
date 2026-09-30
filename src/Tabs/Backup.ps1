@@ -1,4 +1,4 @@
-# WipeReady "Backup" tab: pick user folders and copy them to an external drive
+﻿# WipeReady "Backup" tab: pick user folders and copy them to an external drive
 # Same scan, same robocopy arguments, same outputs. Only layout changed.
 
 function Add-BackupTab {
