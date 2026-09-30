@@ -222,6 +222,10 @@ function Add-ProgramsTab {
             if ($sender.CurrentCell) { Set-ProgramsVisibleRow $sender $sender.CurrentCell.RowIndex }
         } catch { }
     })
+    $grid.Add_RowEnter({
+        param($sender, $e)
+        try { Set-ProgramsVisibleRow $sender $e.RowIndex } catch { }
+    })
     Update-ProgramsCount
     try {
         if ($grid.Rows.Count -gt 0 -and $grid.Columns.Contains('Keep')) {
@@ -282,18 +286,25 @@ function Update-ProgramsCount {
     $script:ProgramsCountLabel.Text = $text
 }
 
-# Keeps keyboard navigation visible: scrolls the grid so $index is shown.
-# Setting CurrentCell alone does not always scroll on the last visible row.
+# Keeps keyboard navigation visible: scrolls the grid so $index is shown
+# with one row of context below it (never riding the very bottom edge,
+# otherwise a single extra move leaves it off-screen before the next
+# scroll catches up).
 function Set-ProgramsVisibleRow($grid, [int]$index) {
     try {
         if ($index -lt 0 -or $index -ge $grid.Rows.Count) { return }
         $displayed = $grid.DisplayedRowCount($false)
         if ($displayed -le 0) { return }
+        if ($displayed -ge $grid.Rows.Count) { return } # everything fits
         $first = $grid.FirstDisplayedScrollingRowIndex
-        if ($index -lt $first) {
+        if ($index -le $first) {
             $grid.FirstDisplayedScrollingRowIndex = $index
-        } elseif ($index -ge ($first + $displayed)) {
-            $grid.FirstDisplayedScrollingRowIndex = $index - $displayed + 1
+        } elseif ($index -ge ($first + $displayed - 1)) {
+            $newFirst = $index - $displayed + 2
+            if ($newFirst -lt 0) { $newFirst = 0 }
+            $maxFirst = $grid.Rows.Count - $displayed
+            if ($newFirst -gt $maxFirst) { $newFirst = $maxFirst }
+            $grid.FirstDisplayedScrollingRowIndex = $newFirst
         }
     } catch { }
 }
