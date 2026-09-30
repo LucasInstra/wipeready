@@ -1,6 +1,8 @@
 # Changelog
 
-## 2.1.2
+## 2.1.3
+
+- Removed the subtitle header; pages gained the space
 
 - Title bar uses flow layout (version never overlapped/clipped); header
   shows a single purpose line instead of the repeated app name

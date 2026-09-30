@@ -92,25 +92,8 @@ function New-AppShell {
     }
     $script:form.Add_Resize({ Position-TitleButtons })
 
-    # ---- App header (below the title bar) ----
-    $header = New-Object System.Windows.Forms.Panel
-    $header.Location = New-Object System.Drawing.Point(0, 36)
-    $header.Size = New-Object System.Drawing.Size(940, 62)
-    $header.Anchor = 'Top, Left, Right'
-    $header.BackColor = $T.Panel
-    $script:form.Controls.Add($header)
-
-    # Single purpose line (no repeated app name, no fixed stacking to clip).
-    $lblSub = New-Object System.Windows.Forms.Label
-    $lblSub.Text = "Pre-format inventory  •  pick what to keep before wiping"
-    $lblSub.Font = New-Object System.Drawing.Font('Segoe UI', 11)
-    $lblSub.ForeColor = $T.Text
-    $lblSub.AutoSize = $true
-    $lblSub.Location = New-Object System.Drawing.Point(18, 20)
-    $header.Controls.Add($lblSub)
-
     $strip = New-Object System.Windows.Forms.Panel
-    $strip.Location = New-Object System.Drawing.Point(0, 98)
+    $strip.Location = New-Object System.Drawing.Point(0, 36)
     $strip.Size = New-Object System.Drawing.Size(940, 4)
     $strip.Anchor = 'Top, Left, Right'
     $strip.BackColor = $T.Accent
@@ -128,8 +111,8 @@ function New-AppShell {
     $script:form.Controls.Add($script:NavTable)
 
     $script:PagesPanel = New-Object System.Windows.Forms.Panel
-    $script:PagesPanel.Location = New-Object System.Drawing.Point(10, 158)
-    $script:PagesPanel.Size = New-Object System.Drawing.Size(904, 398)
+    $script:PagesPanel.Location = New-Object System.Drawing.Point(10, 96)
+    $script:PagesPanel.Size = New-Object System.Drawing.Size(904, 460)
     $script:PagesPanel.Anchor = 'Top, Bottom, Left, Right'
     $script:PagesPanel.BackColor = $T.Bg
     $script:form.Controls.Add($script:PagesPanel)
