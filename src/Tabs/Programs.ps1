@@ -204,17 +204,20 @@ function Add-ProgramsTab {
             if ($ri -lt 0) { $ri = 0 }
             if ($isToggle) {
                 if ($ri -ge 0 -and $ri -lt $sender.Rows.Count) {
-                    # Discard any pending checkbox edit so keyboard toggle applies once.
-                    try { $sender.CancelEdit() } catch {
-                        $message = 'CancelEdit: ' + $_.Exception.Message
+                    # Flush (never discard): a pending checkbox edit holds the
+                    # user's last change, so commit it as the baseline first.
+                    try { [void]$sender.EndEdit() } catch {
+                        $message = 'EndEdit: ' + $_.Exception.Message
                         [void]$navErrors.Add($message)
                         Write-ProgramsNavLog -Key $code -Grid $sender -Before $before -Exception $message -Phase 'catch'
                     }
                     $drv = $sender.Rows[$ri].DataBoundItem
                     if ($drv) {
                         $drv['Keep'] = -not [bool]$drv['Keep']
-                        try { $sender.CommitEdit([System.Windows.Forms.DataGridViewDataErrorContexts]::Commit) } catch {
-                            $message = 'CommitEdit: ' + $_.Exception.Message
+                        # Commit through EndEdit too: otherwise the toggle can
+                        # sit uncommitted and a later move would drop it.
+                        try { [void]$sender.EndEdit() } catch {
+                            $message = 'EndEdit: ' + $_.Exception.Message
                             [void]$navErrors.Add($message)
                             Write-ProgramsNavLog -Key $code -Grid $sender -Before $before -Exception $message -Phase 'catch'
                         }
@@ -223,8 +226,9 @@ function Add-ProgramsTab {
                     }
                 }
             } else {
-                try { $sender.CancelEdit() } catch {
-                    $message = 'CancelEdit: ' + $_.Exception.Message
+                # Moving away: flush pending edits so nothing is lost/discarded.
+                try { [void]$sender.EndEdit() } catch {
+                    $message = 'EndEdit: ' + $_.Exception.Message
                     [void]$navErrors.Add($message)
                     Write-ProgramsNavLog -Key $code -Grid $sender -Before $before -Exception $message -Phase 'catch'
                 }
@@ -310,6 +314,15 @@ function Add-ProgramsTab {
     $btnSave.Add_Click({ Save-ProgramsSelection })
     $row.Controls.Add($btnSave)
     Add-Tip $btnSave 'Writes checked rows to selection.json and selection.csv (Ctrl+S)'
+
+    # Silent auto-save when the app closes so the checklist is never lost.
+    $script:form.Add_FormClosing({
+        try {
+            if ($script:ProgramsTable -and $script:ProgramsTable.Rows.Count -gt 0) {
+                [void](Write-ProgramsSelection)
+            }
+        } catch { }
+    })
 
     $btnDiff = New-StyledButton 'Compare...' 140
     $btnDiff.TabIndex = 6
@@ -436,16 +449,22 @@ function Write-ProgramsNavLog {
 }
 
 # Single place that writes selection.json/selection.csv from checked rows.
-# Used by the Save button and by Ctrl+S in search/grid.
-function Save-ProgramsSelection {
+# Returns the number of saved programs. Used by the Save button, Ctrl+S
+# and the silent auto-save on app close.
+function Write-ProgramsSelection {
     $sel = @($script:ProgramsTable.Rows | Where-Object { $_['Keep'] -eq $true } | ForEach-Object {
         [pscustomobject]@{ Program = $_['Program']; Version = $_['Version']; Publisher = $_['Publisher'] }
     })
     # -InputObject keeps it a JSON array even with 0 or 1 items.
     ConvertTo-Json -InputObject @($sel) -Depth 3 | Out-File (Join-Path $script:OutDir 'selection.json') -Encoding UTF8
     $sel | Export-Csv (Join-Path $script:OutDir 'selection.csv') -NoTypeInformation -Encoding UTF8
-    Set-Status "Selection saved: $($sel.Count) programs." -Kind Success
-    [void][System.Windows.Forms.MessageBox]::Show("Selection saved ($($sel.Count) programs).", 'WipeReady')
+    return @($sel).Count
+}
+
+function Save-ProgramsSelection {
+    $count = Write-ProgramsSelection
+    Set-Status "Selection saved: $count programs." -Kind Success
+    [void][System.Windows.Forms.MessageBox]::Show("Selection saved ($count programs).", 'WipeReady')
 }
 
 # Diffs installed programs against another inventory's selection.csv.

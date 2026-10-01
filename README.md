@@ -13,7 +13,7 @@ powershell -ExecutionPolicy Bypass -File src/App.ps1
 ## Tabs
 
 - **Summary** — machine, CPU, RAM, GPU, OS and key; exports drivers and Wi-Fi; generates `report.html`
-- **Programs** — check what to keep and save the selection (`selection.json`/`selection.csv`)
+- **Programs** — check what to keep and save the selection (`selection.json`/`selection.csv`). Keyboard: `Tab` enters the list, `Up`/`Down` move, `Enter` toggles and advances, `Space` toggles, `Ctrl+S` saves. The selection also auto-saves silently when the app closes.
 - **Backup** — check user folders, see the selected GB total, copy them to the external drive
 - **Restore** — exports `reinstall.json` from winget
 
