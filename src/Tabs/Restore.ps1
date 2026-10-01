@@ -9,6 +9,10 @@ function Add-RestoreTab {
     # Parent now (not in Register-Page): keeps binding mechanics identical
     # across tabs (see Programs).
     $script:PagesPanel.Controls.Add($tab)
+    # Size the tab to its final docked size BEFORE adding children: anchor
+    # margins are captured when a control is added, and a default-sized
+    # tab would record negative margins (children would then overflow).
+    $tab.Size = $script:PagesPanel.ClientSize
 
     $tab.Controls.Add((New-SectionHeader 'After formatting' 'Reinstall in order. Everything the app saved lives in Desktop\wipeready.'))
 

@@ -9,6 +9,10 @@ function Add-SummaryTab {
     # Parent now (not in Register-Page): the grid's data binding needs
     # the form chain to exist before DataSource is set below.
     $script:PagesPanel.Controls.Add($tab)
+    # Size the tab to its final docked size BEFORE adding children: anchor
+    # margins are captured when a control is added, and a default-sized
+    # tab would record negative margins (children would then overflow).
+    $tab.Size = $script:PagesPanel.ClientSize
 
     $tab.Controls.Add((New-SectionHeader 'Machine summary' 'Hardware, OS and product key collected from this PC.'))
 

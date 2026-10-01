@@ -27,7 +27,7 @@ Then, before formatting: export drivers and Wi-Fi, save the program checklist, c
 
 - Checklist of installed programs (machine and per-user), with a search filter
 - Keyboard: `Tab` enters the list, `Up`/`Down` move, `Enter` toggles and advances, `Space` toggles, `Ctrl+S` saves
-- **Save selection** writes `selection.json`/`selection.csv`; the checklist also auto-saves when the app closes
+- **Save selection** writes `selection.json`/`selection.csv`; the checklist also auto-saves when the app closes and is restored when it reopens
 - **Compare…** diffs the current programs against a `selection.csv` from another inventory
 
 ### Backup
@@ -63,6 +63,7 @@ Everything goes to `Desktop\wipeready\`:
 ```
 report.html           hardware, programs, folders, startup
 selection.json/.csv   programs to keep
+selection-state.json  checklist state (restored on open)
 reinstall.json        winget reinstall kit
 setup.ps1             one-shot restore script
 checklist.json        post-format checklist state

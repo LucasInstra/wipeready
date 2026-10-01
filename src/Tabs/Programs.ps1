@@ -9,8 +9,12 @@ function Add-ProgramsTab {
     # Parent now (not in Register-Page): the grid's data binding needs
     # the form chain to exist before DataSource is set below.
     $script:PagesPanel.Controls.Add($tab)
+    # Size the tab to its final docked size BEFORE adding children: anchor
+    # margins are captured when a control is added, and a default-sized
+    # tab would record negative margins (children would then overflow).
+    $tab.Size = $script:PagesPanel.ClientSize
 
-    $tab.Controls.Add((New-SectionHeader 'Installed programs' 'Check what to keep. Save writes selection.json and selection.csv.'))
+    $tab.Controls.Add((New-SectionHeader 'Installed programs' 'Check what to keep. The checklist is saved on close and restored on open.'))
 
     # ---- Search row (filters the already-loaded table, no new collection) ----
     $searchPanel = New-Object System.Windows.Forms.Panel
@@ -102,6 +106,31 @@ function Add-ProgramsTab {
     $grid.Columns['Program'].FillWeight = 52
     $grid.Columns['Version'].FillWeight = 15
     $grid.Columns['Publisher'].FillWeight = 15
+
+    # ---- Restore the checklist saved by a previous run ----
+    # selection-state.json holds every program with its Keep flag (exact
+    # round-trip). Older inventories only have selection.json (the
+    # keep-list): anything missing there was unchecked at save time.
+    try {
+        $statePath = Join-Path $script:OutDir 'selection-state.json'
+        $selPath = Join-Path $script:OutDir 'selection.json'
+        if (Test-Path $statePath) {
+            # Two-step parse: PS 5.1 keeps a JSON array as a single
+            # pipeline object, so @() around the pipe would nest it.
+            $rawState = Get-Content $statePath -Raw -ErrorAction Stop | ConvertFrom-Json
+            $state = @($rawState)
+            foreach ($row in $script:ProgramsTable.Rows) {
+                $hit = $state | Where-Object { $_.Program -eq $row['Program'] } | Select-Object -First 1
+                if ($hit) { $row['Keep'] = [bool]$hit.Keep }
+            }
+        } elseif (Test-Path $selPath) {
+            $rawSel = Get-Content $selPath -Raw -ErrorAction Stop | ConvertFrom-Json
+            $kept = @($rawSel | ForEach-Object { $_.Program })
+            foreach ($row in $script:ProgramsTable.Rows) {
+                $row['Keep'] = ($kept -contains $row['Program'])
+            }
+        }
+    } catch { }
 
     # ---- Keyboard: Tab enters/leaves the list, Enter/Space toggles Keep ----
     # Tab order: search (0) -> grid (1) -> buttons (2..5).
@@ -448,16 +477,22 @@ function Write-ProgramsNavLog {
     } catch { }
 }
 
-# Single place that writes selection.json/selection.csv from checked rows.
+# Single place that writes the checklist files from the grid rows:
+# selection.json/selection.csv (what to keep) and selection-state.json
+# (every row with its Keep flag, restored on the next run).
 # Returns the number of saved programs. Used by the Save button, Ctrl+S
 # and the silent auto-save on app close.
 function Write-ProgramsSelection {
     $sel = @($script:ProgramsTable.Rows | Where-Object { $_['Keep'] -eq $true } | ForEach-Object {
         [pscustomobject]@{ Program = $_['Program']; Version = $_['Version']; Publisher = $_['Publisher'] }
     })
-    # -InputObject keeps it a JSON array even with 0 or 1 items.
+    # -InputObject keeps both JSON files arrays even with 0 or 1 items.
     ConvertTo-Json -InputObject @($sel) -Depth 3 | Out-File (Join-Path $script:OutDir 'selection.json') -Encoding UTF8
     $sel | Export-Csv (Join-Path $script:OutDir 'selection.csv') -NoTypeInformation -Encoding UTF8
+    $state = foreach ($row in $script:ProgramsTable.Rows) {
+        [pscustomobject]@{ Program = $row['Program']; Keep = [bool]$row['Keep'] }
+    }
+    ConvertTo-Json -InputObject @($state) -Depth 3 | Out-File (Join-Path $script:OutDir 'selection-state.json') -Encoding UTF8
     return @($sel).Count
 }
 

@@ -6,6 +6,9 @@
 function New-AppShell {
     $script:form = New-Object System.Windows.Forms.Form
     $script:form.Text = "WipeReady v$script:Version"
+    # 940x640 is the design baseline: all anchors capture their margins
+    # while the shell is built at this size. The window opens larger once
+    # it is shown (clamped to the screen), see Add_Load below.
     $script:form.Size = New-Object System.Drawing.Size(940, 640)
     $script:form.MinimumSize = New-Object System.Drawing.Size(940, 640)
     $script:form.StartPosition = 'CenterScreen'
@@ -92,6 +95,20 @@ function New-AppShell {
     }
     $script:form.Add_Resize({ Position-TitleButtons })
 
+    # Default window size: bigger than the 940x640 design baseline so the
+    # lists get room, clamped to the screen. Runs on Load (after the shell
+    # and all pages exist) so every anchor stretches from its design margin.
+    $script:form.Add_Load({
+        try {
+            $wa = [System.Windows.Forms.Screen]::FromControl($script:form).WorkingArea
+            $w = [Math]::Min(1200, $wa.Width - 120)
+            $h = [Math]::Min(840, $wa.Height - 100)
+            if ($w -lt 940) { $w = 940 }
+            if ($h -lt 640) { $h = 640 }
+            $script:form.Size = New-Object System.Drawing.Size($w, $h)
+        } catch { }
+    })
+
     $strip = New-Object System.Windows.Forms.Panel
     $strip.Location = New-Object System.Drawing.Point(0, 36)
     $strip.Size = New-Object System.Drawing.Size(940, 4)
@@ -115,6 +132,13 @@ function New-AppShell {
     $script:PagesPanel.Size = New-Object System.Drawing.Size(904, 460)
     $script:PagesPanel.Anchor = 'Top, Bottom, Left, Right'
     $script:PagesPanel.BackColor = $T.Bg
+    $script:form.Controls.Add($script:PagesPanel)
+    # Re-capture the anchor margins against the settled form: WinForms
+    # records them when the control is added, and building the rest of the
+    # shell can skew that record (everything would then grow by the wrong
+    # delta on resize, pushing controls off-screen).
+    $script:PagesPanel.Size = New-Object System.Drawing.Size(904, 460)
+    $script:form.Controls.Remove($script:PagesPanel)
     $script:form.Controls.Add($script:PagesPanel)
 
     $script:PagePanels = @()

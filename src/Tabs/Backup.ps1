@@ -9,6 +9,10 @@ function Add-BackupTab {
     # Parent now (not in Register-Page): keeps binding mechanics identical
     # across tabs (see Programs).
     $script:PagesPanel.Controls.Add($tab)
+    # Size the tab to its final docked size BEFORE adding children: anchor
+    # margins are captured when a control is added, and a default-sized
+    # tab would record negative margins (children would then overflow).
+    $tab.Size = $script:PagesPanel.ClientSize
 
     $tab.Controls.Add((New-SectionHeader 'Folders and backup' 'Scan, check what matters, copy to the external drive. AppData starts unchecked.'))
 
